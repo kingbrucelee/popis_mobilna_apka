@@ -5,7 +5,9 @@ class Mp {
   final int numberOfVotes;
   final String? profession;
   final String voivodeship;
-  final String? birthDate; // Dodajemy pole
+  final String? birthDate;
+  final String firstName; // Dodane pole
+  final String lastName; // Dodane pole
 
   Mp({
     required this.club,
@@ -14,28 +16,17 @@ class Mp {
     required this.numberOfVotes,
     this.profession,
     required this.voivodeship,
-    this.birthDate, // Dodajemy do konstruktora
+    this.birthDate,
+    required this.firstName, // Dodane w konstruktorze
+    required this.lastName, // Dodane w konstruktorze
   });
 
   @override
   String toString() {
-    String base =
-        "Był w klubie $club, został wybrany z okręgu $districtName znajdującym się w woj. $voivodeship, miał wykształcenie $educationLevel";
-
-    if (numberOfVotes != 0) {
-      base += ", otrzymał $numberOfVotes głosów";
-    }
-
-    if (profession == null) {
-      base += " Podczas tej kadencji poseł nie pełnił żadnej profesji.";
-    } else {
-      base += " Podczas tej kadencji poseł miał profesję $profession.";
-    }
-
-    return base;
+    // Możemy zwrócić np. samo imię i nazwisko
+    return "$firstName $lastName";
   }
 
-  // Dodajemy mapowanie birthDate z JSON:
   factory Mp.fromJson(Map<String, dynamic> json) {
     return Mp(
       club: json['club'] ?? 'Brak danych',
@@ -44,7 +35,9 @@ class Mp {
       numberOfVotes: json['numberOfVotes'] ?? 0,
       profession: json['profession'],
       voivodeship: json['voivodeship'] ?? 'Brak danych',
-      birthDate: json['birthDate'], // Przypisanie wartości z JSON
+      birthDate: json['birthDate'],
+      firstName: json['firstName'] ?? 'Nieznane imię', // Dopasuj do API
+      lastName: json['lastName'] ?? 'Nieznane nazwisko', // Dopasuj do API
     );
   }
 }

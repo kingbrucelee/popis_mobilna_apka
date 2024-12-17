@@ -63,8 +63,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
   Mp? _findMpByString(String val) {
     for (final mp in _mpsList) {
-      if ("${mp.club} - ${mp.districtName} - ${mp.voivodeship} - ${mp.toString()}" ==
-          val) {
+      if ("${mp.firstName} ${mp.lastName}" == val) {
         return mp;
       }
     }
@@ -138,10 +137,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       final mps = await service.getMps(term); // Pobieranie listy posłów
       setState(() {
         _mpsList = mps;
-        _mpNames = _mpsList
-            .map((mp) =>
-                "${mp.club} - ${mp.districtName} - ${mp.voivodeship} - ${mp.toString()}")
-            .toList();
+        _mpNames =
+            _mpsList.map((mp) => "${mp.firstName} ${mp.lastName}").toList();
         if (_mpNames.isNotEmpty) {
           _selectedMp = _mpNames.first;
           _loadMpHistory(
@@ -344,8 +341,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 if (_selectedCommittee == "Wybierz komisje")
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text("Wybierz komisję aby zobaczyć statystyki",
-                        style: TextStyle(fontStyle: FontStyle.italic)),
+                    child:
+                        Text("", style: TextStyle(fontStyle: FontStyle.italic)),
                   )
                 else if (_committeeStats != null) ...[
                   TabBar(
@@ -909,8 +906,8 @@ Widget buildAgeHistogram(List<int> ages) {
   // Podział wieku na przedziały (np. 30-35, 36-40)
   Map<String, int> ageBins = {};
   for (int age in ages) {
-    int binStart = (age ~/ 5) * 5;
-    String binLabel = "$binStart-${binStart + 5}";
+    int binStart = (age ~/ 10) * 10;
+    String binLabel = "$binStart-${binStart + 10}";
     ageBins[binLabel] = (ageBins[binLabel] ?? 0) + 1;
   }
 
@@ -949,7 +946,7 @@ Widget buildAgeHistogram(List<int> ages) {
             ),
           ),
           leftTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: true),
+            sideTitles: SideTitles(showTitles: false),
           ),
         ),
         gridData: FlGridData(show: true),
