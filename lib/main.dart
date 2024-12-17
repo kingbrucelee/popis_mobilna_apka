@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       // Corrected: Use appBar instead of title
       appBar: AppBar(
-          title: Text('Internetowa Analiza Polskiej Polityki (IAPP)',
+          title: Text('Internetowa Analiza Polskiej Polityki',
               overflow: TextOverflow.ellipsis)),
       body: Center(
         child: Column(

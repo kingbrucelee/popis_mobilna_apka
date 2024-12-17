@@ -49,7 +49,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     _tabController = TabController(length: 2, vsync: this);
     _innerTabController = TabController(length: 2, vsync: this);
 
-    _loadMpsData(_poslowieTermNumber);
+    _loadMpsData(_poslowieTermNumber); // Załaduj posłów
+    _loadCommittees(); // Automatyczne załadowanie komisji
   }
 
   @override
@@ -229,132 +230,138 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 
   Widget _buildKomisjeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Kadencja sejmu',
-              style: TextStyle(fontSize: 18, color: Colors.black)),
-          SizedBox(height: 8),
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
+              Text('Kadencja sejmu',
+                  style: TextStyle(fontSize: 18, color: Colors.black)),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextField(
+                        controller: TextEditingController(text: '$_value'),
+                        readOnly: true,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                        decoration: InputDecoration(border: InputBorder.none),
+                      ),
+                    ),
                   ),
-                  child: TextField(
-                    controller: TextEditingController(text: '$_value'),
-                    readOnly: true,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                    decoration: InputDecoration(border: InputBorder.none),
+                  SizedBox(width: 8),
+                  Container(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          if (_value > 1) _value--;
+                          _loadCommittees(); // Automatyczne przeładowanie komisji
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Icon(Icons.remove, color: Colors.white),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(width: 8),
-              Container(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (_value > 1) _value--;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                  SizedBox(width: 8),
+                  Container(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _value++;
+                          _loadCommittees(); // Automatyczne przeładowanie komisji
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[800],
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Icon(Icons.add, color: Colors.white),
+                    ),
                   ),
-                  child: Icon(Icons.remove, color: Colors.white),
-                ),
-              ),
-              SizedBox(width: 8),
-              Container(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _value++;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[800],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Icon(Icons.add, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadCommittees,
-            child: Text("Załaduj komisje"),
-          ),
-          SizedBox(height: 16),
-          if (_isLoadingCommittees)
-            Center(child: CircularProgressIndicator())
-          else if (_committees.isEmpty &&
-              _selectedCommittee == "Wybierz komisje")
-            Text("Nie znaleziono komisji dla kadencji $_value")
-          else ...[
-            Text("Komisja, której statystyki cię interesują"),
-            DropdownButton<String>(
-              isExpanded: true,
-              value: _selectedCommittee,
-              items: <String>[
-                "Wybierz komisje",
-                ..._committees.map((c) => "${c['name']} - ${c['code']}"),
-                "łącznie"
-              ]
-                  .map(
-                      (e) => DropdownMenuItem<String>(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (val) async {
-                setState(() {
-                  _selectedCommittee = val!;
-                  _committeeStats = null;
-                });
-                if (_selectedCommittee != "Wybierz komisje") {
-                  await _loadCommitteeStats();
-                }
-              },
-            ),
-            if (_selectedCommittee == "Wybierz komisje")
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text("Wybierz komisję aby zobaczyć statystyki",
-                    style: TextStyle(fontStyle: FontStyle.italic)),
-              )
-            else if (_committeeStats != null) ...[
-              TabBar(
-                controller: _innerTabController,
-                labelColor: Colors.red,
-                unselectedLabelColor: Colors.grey,
-                tabs: [
-                  Tab(text: "Przegląd Komisji"),
-                  Tab(text: "Statystyki Szczegółowe"),
                 ],
               ),
-              Container(
-                height: 600,
-                child: TabBarView(
-                  controller: _innerTabController,
-                  children: [
-                    _buildOverviewTab(),
-                    _buildDetailsTab(),
-                  ],
+              SizedBox(height: 16),
+              if (_isLoadingCommittees)
+                Center(child: CircularProgressIndicator())
+              else if (_committees.isEmpty &&
+                  _selectedCommittee == "Wybierz komisje")
+                Text("Nie znaleziono komisji dla kadencji $_value")
+              else ...[
+                Text("Komisja, której statystyki cię interesują"),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  value: _selectedCommittee,
+                  items: <String>[
+                    "Wybierz komisje",
+                    ..._committees.map((c) => "${c['name']} - ${c['code']}"),
+                    "łącznie"
+                  ]
+                      .map((e) =>
+                          DropdownMenuItem<String>(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (val) async {
+                    setState(() {
+                      _selectedCommittee = val!;
+                      _committeeStats = null;
+                    });
+                    if (_selectedCommittee != "Wybierz komisje") {
+                      await _loadCommitteeStats();
+                    }
+                  },
                 ),
-              )
-            ]
-          ]
-        ],
-      ),
+                if (_selectedCommittee == "Wybierz komisje")
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text("Wybierz komisję aby zobaczyć statystyki",
+                        style: TextStyle(fontStyle: FontStyle.italic)),
+                  )
+                else if (_committeeStats != null) ...[
+                  TabBar(
+                    controller: _innerTabController,
+                    labelColor: Colors.red,
+                    unselectedLabelColor: Colors.grey,
+                    tabs: [
+                      Tab(text: "Przegląd Komisji"),
+                      Tab(text: "Statystyki Szczegółowe"),
+                    ],
+                  ),
+                ]
+              ]
+            ],
+          ),
+        ),
+
+        // Tutaj rozszerzamy dostępne miejsce dla TabBarView
+        if (_selectedCommittee != "Wybierz komisje" && _committeeStats != null)
+          Expanded(
+            child: TabBarView(
+              controller: _innerTabController,
+              children: [
+                // Dla zakładek stosujemy SingleChildScrollView wewnątrz,
+                // aby zawartość mogła się przewijać.
+                SingleChildScrollView(child: _buildOverviewTab()),
+                SingleChildScrollView(child: _buildDetailsTab()),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -569,47 +576,89 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
   Widget buildBarChart(Map<String, int> data) {
     final clubEntries = data.entries.toList();
-    return Container(
-      height: 300,
-      padding: EdgeInsets.all(16),
-      child: BarChart(
-        BarChartData(
-          barGroups: clubEntries.asMap().entries.map((entry) {
-            final index = entry.key;
-            final count = entry.value.value;
-            return BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: count.toDouble(),
-                  color: Colors.blue,
-                  width: 20,
-                  borderRadius: BorderRadius.circular(4),
-                )
+
+    // Lista dostępnych kolorów do przypisania partiom
+    final List<Color> availableColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.red,
+      Colors.amber,
+      Colors.cyan,
+      Colors.teal,
+      Colors.pink,
+      Colors.orange,
+      Colors.brown,
+      Colors.purple,
+    ];
+
+    // Przypisywanie kolorów dynamicznie dla partii
+    final Map<String, Color> dynamicColors = {};
+    for (var i = 0; i < clubEntries.length; i++) {
+      dynamicColors[clubEntries[i].key] =
+          availableColors[i % availableColors.length];
+    }
+
+    return Column(
+      children: [
+        Container(
+          height: 300,
+          padding: EdgeInsets.all(16),
+          child: BarChart(
+            BarChartData(
+              barGroups: clubEntries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final partyName = entry.value.key;
+                final count = entry.value.value;
+
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: count.toDouble(),
+                      color: dynamicColors[partyName], // Przypisany kolor
+                      width: 20,
+                      borderRadius: BorderRadius.circular(4),
+                    )
+                  ],
+                );
+              }).toList(),
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: false, // Ukryj nazwy partii pod wykresem
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              gridData: FlGridData(show: true),
+              borderData: FlBorderData(show: false),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        // Dodanie legendy pod wykresem z dynamicznymi kolorami
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: clubEntries.map((entry) {
+            final partyName = entry.key;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  color: dynamicColors[partyName], // Dynamiczny kolor
+                ),
+                SizedBox(width: 4),
+                Text(partyName), // Nazwa partii
               ],
             );
           }).toList(),
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    if (value.toInt() < 0 ||
-                        value.toInt() >= clubEntries.length) {
-                      return SizedBox.shrink();
-                    }
-                    final clubName = clubEntries[value.toInt()].key;
-                    return Text(clubName, style: TextStyle(fontSize: 12));
-                  }),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
-            ),
-          ),
-          gridData: FlGridData(show: true),
-          borderData: FlBorderData(show: false),
         ),
-      ),
+      ],
     );
   }
 
@@ -639,16 +688,50 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
   Widget _buildClubsDataTable(Map<String, dynamic> clubs) {
     final columns = ["Klub", "Członkowie"];
-    return DataTable(
-      columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-      rows: clubs.entries.map((e) {
-        final clubName = e.key;
-        final members = (e.value as List).join(", ");
-        return DataRow(cells: [
-          DataCell(Text(clubName)),
-          DataCell(Text(members)),
-        ]);
-      }).toList(),
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 26.0, // Większy odstęp między kolumnami
+        dataRowMinHeight: 64.0, // Minimalna wysokość wiersza
+        dataRowMaxHeight: 160.0, // Maksymalna wysokość wiersza
+        headingRowHeight: 56.0, // Wysokość nagłówka tabeli
+        columns: columns
+            .map((c) => DataColumn(
+                label: Text(c,
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold))))
+            .toList(),
+        rows: clubs.entries.map((e) {
+          final clubName = e.key;
+          final members = (e.value as List).join(", ");
+
+          return DataRow(cells: [
+            DataCell(
+              Text(
+                clubName,
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+            DataCell(
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxWidth: 250), // Ograniczenie szerokości kolumny
+                child: Padding(
+                  padding: const EdgeInsets.all(
+                      8.0), // Dodanie wewnętrznego paddingu
+                  child: Text(
+                    members,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
+          ]);
+        }).toList(),
+      ),
     );
   }
 
