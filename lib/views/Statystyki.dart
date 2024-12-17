@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api_wrappers/committees.dart';
 import '../models/mp.dart'; // Dodany import modelu Mp
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:math';
 
 class MyModel {}
 
@@ -89,11 +90,12 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     }
   }
 
+  List<int> _committeeAges = [];
+
+// Modyfikacja metody _loadCommitteeStats, aby po wczytaniu stats wczytać również wiek
   Future<void> _loadCommitteeStats() async {
     String? code;
-    if (_selectedCommittee == "łącznie") {
-      code = "łącznie";
-    } else if (_selectedCommittee == "Wybierz komisje") {
+    if (_selectedCommittee == "Wybierz komisje") {
       code = null;
     } else {
       final parts = _selectedCommittee.split("-");
@@ -110,8 +112,21 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         _committeeStats = stats;
         _clubsButBetter = Map<String, List<String>>.from(stats['clubs']);
       });
+
+      // Po załadowaniu statystyk pobieramy dane o wieku członków
+      final agesResult =
+          await service.getCommitteeMemberAges(_clubsButBetter, term: _value);
+      // agesResult['MPsAge'] to Map<String, List<int>> gdzie kluczem jest klub, a wartością lista wieków członków
+      final Map<String, List<int>> mpsAgeMap =
+          Map<String, List<int>>.from(agesResult['MPsAge']);
+      List<int> allAges = [];
+      mpsAgeMap.values.forEach((list) => allAges.addAll(list));
+
+      setState(() {
+        _committeeAges = allAges;
+      });
     } catch (e) {
-      // Handle error if needed
+      // Obsługa błędów jeśli potrzeba
     }
   }
 
@@ -311,7 +326,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                   items: <String>[
                     "Wybierz komisje",
                     ..._committees.map((c) => "${c['name']} - ${c['code']}"),
-                    "łącznie"
+                    //"łącznie"
                   ]
                       .map((e) =>
                           DropdownMenuItem<String>(value: e, child: Text(e)))
@@ -492,55 +507,58 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   // Teraz _buildMpStatistics() zwraca bezpośrednio Widget, bez async
   Widget _buildMpStatistics() {
     if (_selectedMpStat == "wiek") {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Statystyki wieku posła", style: TextStyle(fontSize: 16)),
-          SizedBox(height: 8),
-          Text("Wykres wieku posła (zaimplementuj według potrzeb)"),
-        ],
-      );
-    } else if (_selectedMpStat == "głosy") {
-      final selectedMpObject = _findMpByString(_selectedMp);
-      if (selectedMpObject != null) {
-        return _buildMpVotesChart(selectedMpObject);
-      } else {
-        return Text("Brak danych do wyświetlenia.");
+      List<int> ages = _mpsList
+          .where((mp) =>
+              mp.birthDate != null) // Filtrujemy tylko posłów z datą urodzenia
+          .map((mp) {
+        DateTime birthDate =
+            DateTime.parse(mp.birthDate!); // Safe non-null usage
+        return DateTime.now().year - birthDate.year;
+      }).toList();
+
+      if (ages.isEmpty) {
+        return Center(child: Text("Brak danych o wieku posłów."));
       }
-    } else if (_selectedMpStat == "edukacja") {
+
+      final stats = calculateAgeStats(ages);
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Statystyki edukacji posła", style: TextStyle(fontSize: 16)),
-          SizedBox(height: 8),
-          Text("Wykres edukacji posła (zaimplementuj według potrzeb)"),
-        ],
-      );
-    } else if (_selectedMpStat == "profesja") {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Statystyki profesji posła", style: TextStyle(fontSize: 16)),
-          SizedBox(height: 8),
-          Text("Wykres profesji posła (zaimplementuj według potrzeb)"),
-        ],
-      );
-    } else if (_selectedMpStat == "okręg") {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Statystyki okręgu posła", style: TextStyle(fontSize: 16)),
-          SizedBox(height: 8),
-          Text("Wykres okręgu posła (zaimplementuj według potrzeb)"),
-        ],
-      );
-    } else if (_selectedMpStat == "województwo") {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Statystyki województwa posła", style: TextStyle(fontSize: 16)),
-          SizedBox(height: 8),
-          Text("Wykres województwa posła (zaimplementuj według potrzeb)"),
+          Text("Statystyki wieku posłów", style: TextStyle(fontSize: 16)),
+          SizedBox(height: 16),
+          buildAgeHistogram(ages), // Wykres histogramu
+          SizedBox(height: 16),
+          Text("Statystyki ogólne:",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          DataTable(
+            columns: [
+              DataColumn(label: Text('Statystyka')),
+              DataColumn(label: Text('Wartość')),
+            ],
+            rows: [
+              DataRow(cells: [
+                DataCell(Text('Najmłodszy')),
+                DataCell(Text('${stats['minAge']} lat'))
+              ]),
+              DataRow(cells: [
+                DataCell(Text('Najstarszy')),
+                DataCell(Text('${stats['maxAge']} lat'))
+              ]),
+              DataRow(cells: [
+                DataCell(Text('Średnia')),
+                DataCell(Text('${stats['avgAge']} lat'))
+              ]),
+              DataRow(cells: [
+                DataCell(Text('Mediana')),
+                DataCell(Text('${stats['medianAge']} lat'))
+              ]),
+              DataRow(cells: [
+                DataCell(Text('Odchylenie standardowe')),
+                DataCell(Text('${stats['stdDev']} lat'))
+              ]),
+            ],
+          ),
         ],
       );
     } else {
@@ -676,11 +694,11 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           buildBarChart(clubsCount),
           SizedBox(height: 16),
           _buildClubsDataTable(clubs),
-          if (_selectedCommittee == "łącznie") ...[
-            SizedBox(height: 16),
-            Text("Dane wszystkich posłów"),
-            _buildMembersDataTable(membersMap),
-          ]
+          // if (_selectedCommittee == "łącznie") ...[
+          //   SizedBox(height: 16),
+          //   Text("Dane wszystkich posłów"),
+          //   _buildMembersDataTable(membersMap),
+          // ]
         ],
       ),
     );
@@ -719,7 +737,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                     maxWidth: 250), // Ograniczenie szerokości kolumny
                 child: Padding(
                   padding: const EdgeInsets.all(
-                      8.0), // Dodanie wewnętrznego paddingu
+                      4.0), // Dodanie wewnętrznego paddingu
                   child: Text(
                     members,
                     softWrap: true,
@@ -773,9 +791,53 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           SizedBox(height: 16),
           if (_selectedStat == "Wybierz typ statystyki")
             Text("Wybierz typ statystyki aby zobaczyć szczegółowe dane")
-          else if (_selectedStat == "wiek")
-            Text("Tu pokaż dane wieku (zaimplementuj według potrzeb)")
-          else if (_selectedStat == "edukacja")
+          else if (_selectedStat == "wiek") ...[
+            if (_committeeAges.isEmpty)
+              Text("Brak danych o wieku członków tej komisji.")
+            else ...[
+              // Wyświetlamy wykres i dane statystyczne
+              Text("Statystyki wieku członków komisji",
+                  style: TextStyle(fontSize: 16)),
+              SizedBox(height: 16),
+              buildAgeHistogram(_committeeAges),
+              SizedBox(height: 16),
+              Text("Statystyki ogólne:",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Builder(
+                builder: (context) {
+                  final stats = calculateAgeStats(_committeeAges);
+                  return DataTable(
+                    columns: [
+                      DataColumn(label: Text('Statystyka')),
+                      DataColumn(label: Text('Wartość')),
+                    ],
+                    rows: [
+                      DataRow(cells: [
+                        DataCell(Text('Najmłodszy')),
+                        DataCell(Text('${stats['minAge']} lat'))
+                      ]),
+                      DataRow(cells: [
+                        DataCell(Text('Najstarszy')),
+                        DataCell(Text('${stats['maxAge']} lat'))
+                      ]),
+                      DataRow(cells: [
+                        DataCell(Text('Średnia')),
+                        DataCell(Text('${stats['avgAge']} lat'))
+                      ]),
+                      DataRow(cells: [
+                        DataCell(Text('Mediana')),
+                        DataCell(Text('${stats['medianAge']} lat'))
+                      ]),
+                      DataRow(cells: [
+                        DataCell(Text('Odchylenie standardowe')),
+                        DataCell(Text('${stats['stdDev']} lat'))
+                      ]),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ] else if (_selectedStat == "edukacja")
             Text("Tu pokaż dane edukacji (zaimplementuj według potrzeb)")
           else if (_selectedStat == "profesja")
             Text("Tu pokaż dane profesji (zaimplementuj według potrzeb)")
@@ -817,4 +879,82 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       ),
     );
   }
+}
+
+//Wykres szczegolowe wiek
+
+// Funkcja do obliczenia statystyk wieku
+Map<String, dynamic> calculateAgeStats(List<int> ages) {
+  ages.sort();
+  int minAge = ages.first;
+  int maxAge = ages.last;
+  double avgAge = ages.reduce((a, b) => a + b) / ages.length;
+  num medianAge = ages.length % 2 == 0
+      ? (ages[ages.length ~/ 2 - 1] + ages[ages.length ~/ 2]) / 2
+      : ages[ages.length ~/ 2];
+  double stdDev = sqrt(
+      ages.map((a) => pow(a - avgAge, 2)).reduce((a, b) => a + b) /
+          ages.length);
+
+  return {
+    'minAge': minAge,
+    'maxAge': maxAge,
+    'avgAge': avgAge.toStringAsFixed(1),
+    'medianAge': medianAge.toStringAsFixed(1),
+    'stdDev': stdDev.toStringAsFixed(1),
+  };
+}
+
+Widget buildAgeHistogram(List<int> ages) {
+  // Podział wieku na przedziały (np. 30-35, 36-40)
+  Map<String, int> ageBins = {};
+  for (int age in ages) {
+    int binStart = (age ~/ 5) * 5;
+    String binLabel = "$binStart-${binStart + 5}";
+    ageBins[binLabel] = (ageBins[binLabel] ?? 0) + 1;
+  }
+
+  List<MapEntry<String, int>> sortedBins = ageBins.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+
+  return Container(
+    height: 300,
+    child: BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.center,
+        barGroups: sortedBins.asMap().entries.map((entry) {
+          int index = entry.key;
+          String bin = entry.value.key;
+          int count = entry.value.value;
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: count.toDouble(),
+                color: Colors.orange,
+                width: 20,
+              ),
+            ],
+          );
+        }).toList(),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value < 0 || value >= sortedBins.length) return SizedBox();
+                return Text(sortedBins[value.toInt()].key,
+                    style: TextStyle(fontSize: 10));
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: true),
+          ),
+        ),
+        gridData: FlGridData(show: true),
+        borderData: FlBorderData(show: false),
+      ),
+    ),
+  );
 }

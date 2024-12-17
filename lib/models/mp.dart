@@ -1,5 +1,3 @@
-// model/mp.dart
-
 class Mp {
   final String club;
   final String districtName;
@@ -7,6 +5,7 @@ class Mp {
   final int numberOfVotes;
   final String? profession;
   final String voivodeship;
+  final String? birthDate; // Dodajemy pole
 
   Mp({
     required this.club,
@@ -15,6 +14,7 @@ class Mp {
     required this.numberOfVotes,
     this.profession,
     required this.voivodeship,
+    this.birthDate, // Dodajemy do konstruktora
   });
 
   @override
@@ -35,7 +35,7 @@ class Mp {
     return base;
   }
 
-  // Factory constructor to create Mp from JSON
+  // Dodajemy mapowanie birthDate z JSON:
   factory Mp.fromJson(Map<String, dynamic> json) {
     return Mp(
       club: json['club'] ?? 'Brak danych',
@@ -44,6 +44,7 @@ class Mp {
       numberOfVotes: json['numberOfVotes'] ?? 0,
       profession: json['profession'],
       voivodeship: json['voivodeship'] ?? 'Brak danych',
+      birthDate: json['birthDate'], // Przypisanie wartości z JSON
     );
   }
 }
