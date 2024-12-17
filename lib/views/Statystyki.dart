@@ -91,7 +91,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
   List<int> _committeeAges = [];
 
-// Modyfikacja metody _loadCommitteeStats, aby po wczytaniu stats wczytać również wiek
   Future<void> _loadCommitteeStats() async {
     String? code;
     if (_selectedCommittee == "Wybierz komisje") {
@@ -112,10 +111,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         _clubsButBetter = Map<String, List<String>>.from(stats['clubs']);
       });
 
-      // Po załadowaniu statystyk pobieramy dane o wieku członków
       final agesResult =
           await service.getCommitteeMemberAges(_clubsButBetter, term: _value);
-      // agesResult['MPsAge'] to Map<String, List<int>> gdzie kluczem jest klub, a wartością lista wieków członków
       final Map<String, List<int>> mpsAgeMap =
           Map<String, List<int>>.from(agesResult['MPsAge']);
       List<int> allAges = [];
@@ -213,20 +210,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         },
       ];
 
-      // int total_votes =
-      //     history.fold(0, (sum, d) => sum + (d["Uzyskane głosy"] as int));
-      // history.add({
-      //   "Kadencja": "Łącznie",
-      //   "Klub": "${_mpsList.length} unikalnych klubów",
-      //   "Okrąg": "${_mpsList.length} unikalnych okręgów",
-      //   "Województwo": "${_mpsList.length} unikalnych województw",
-      //   "Edukacja":
-      //       "${_mpsList.map((mp) => mp.educationLevel).toSet().length} unikalnych poziomów edukacji",
-      //   "Uzyskane głosy": total_votes,
-      //   "Profesja":
-      //       "${_mpsList.map((mp) => mp.profession ?? "Brak").toSet().length} unikalnych zawodów",
-      // });
-
       setState(() {
         _historyOfMp = history;
         _isLoadingPoslowieData = false;
@@ -278,7 +261,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                       onPressed: () {
                         setState(() {
                           if (_value > 1) _value--;
-                          _loadCommittees(); // Automatyczne przeładowanie komisji
+                          _loadCommittees();
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -296,7 +279,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                       onPressed: () {
                         setState(() {
                           _value++;
-                          _loadCommittees(); // Automatyczne przeładowanie komisji
+                          _loadCommittees();
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -323,7 +306,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                   items: <String>[
                     "Wybierz komisje",
                     ..._committees.map((c) => "${c['name']} - ${c['code']}"),
-                    //"łącznie"
                   ]
                       .map((e) =>
                           DropdownMenuItem<String>(value: e, child: Text(e)))
@@ -359,15 +341,11 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             ],
           ),
         ),
-
-        // Tutaj rozszerzamy dostępne miejsce dla TabBarView
         if (_selectedCommittee != "Wybierz komisje" && _committeeStats != null)
           Expanded(
             child: TabBarView(
               controller: _innerTabController,
               children: [
-                // Dla zakładek stosujemy SingleChildScrollView wewnątrz,
-                // aby zawartość mogła się przewijać.
                 SingleChildScrollView(child: _buildOverviewTab()),
                 SingleChildScrollView(child: _buildDetailsTab()),
               ],
@@ -501,15 +479,10 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     );
   }
 
-  // Teraz _buildMpStatistics() zwraca bezpośrednio Widget, bez async
   Widget _buildMpStatistics() {
     if (_selectedMpStat == "wiek") {
-      List<int> ages = _mpsList
-          .where((mp) =>
-              mp.birthDate != null) // Filtrujemy tylko posłów z datą urodzenia
-          .map((mp) {
-        DateTime birthDate =
-            DateTime.parse(mp.birthDate!); // Safe non-null usage
+      List<int> ages = _mpsList.where((mp) => mp.birthDate != null).map((mp) {
+        DateTime birthDate = DateTime.parse(mp.birthDate!);
         return DateTime.now().year - birthDate.year;
       }).toList();
 
@@ -524,7 +497,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         children: [
           Text("Statystyki wieku posłów", style: TextStyle(fontSize: 16)),
           SizedBox(height: 16),
-          buildAgeHistogram(ages), // Wykres histogramu
+          buildAgeHistogram(ages),
           SizedBox(height: 16),
           Text("Statystyki ogólne:",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -591,8 +564,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
   Widget buildBarChart(Map<String, int> data) {
     final clubEntries = data.entries.toList();
-
-    // Lista dostępnych kolorów do przypisania partiom
     final List<Color> availableColors = [
       Colors.blue,
       Colors.green,
@@ -605,8 +576,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       Colors.brown,
       Colors.purple,
     ];
-
-    // Przypisywanie kolorów dynamicznie dla partii
     final Map<String, Color> dynamicColors = {};
     for (var i = 0; i < clubEntries.length; i++) {
       dynamicColors[clubEntries[i].key] =
@@ -630,7 +599,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                   barRods: [
                     BarChartRodData(
                       toY: count.toDouble(),
-                      color: dynamicColors[partyName], // Przypisany kolor
+                      color: dynamicColors[partyName],
                       width: 20,
                       borderRadius: BorderRadius.circular(4),
                     )
@@ -640,7 +609,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
-                    showTitles: false, // Ukryj nazwy partii pod wykresem
+                    showTitles: false,
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -653,7 +622,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           ),
         ),
         SizedBox(height: 16),
-        // Dodanie legendy pod wykresem z dynamicznymi kolorami
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -665,10 +633,10 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 Container(
                   width: 16,
                   height: 16,
-                  color: dynamicColors[partyName], // Dynamiczny kolor
+                  color: dynamicColors[partyName],
                 ),
                 SizedBox(width: 4),
-                Text(partyName), // Nazwa partii
+                Text(partyName),
               ],
             );
           }).toList(),
@@ -691,11 +659,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           buildBarChart(clubsCount),
           SizedBox(height: 16),
           _buildClubsDataTable(clubs),
-          // if (_selectedCommittee == "łącznie") ...[
-          //   SizedBox(height: 16),
-          //   Text("Dane wszystkich posłów"),
-          //   _buildMembersDataTable(membersMap),
-          // ]
         ],
       ),
     );
@@ -707,10 +670,10 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        columnSpacing: 26.0, // Większy odstęp między kolumnami
-        dataRowMinHeight: 64.0, // Minimalna wysokość wiersza
-        dataRowMaxHeight: 160.0, // Maksymalna wysokość wiersza
-        headingRowHeight: 56.0, // Wysokość nagłówka tabeli
+        columnSpacing: 26.0,
+        dataRowMinHeight: 64.0,
+        dataRowMaxHeight: 160.0,
+        headingRowHeight: 56.0,
         columns: columns
             .map((c) => DataColumn(
                 label: Text(c,
@@ -730,11 +693,9 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             ),
             DataCell(
               ConstrainedBox(
-                constraints: BoxConstraints(
-                    maxWidth: 250), // Ograniczenie szerokości kolumny
+                constraints: BoxConstraints(maxWidth: 250),
                 child: Padding(
-                  padding: const EdgeInsets.all(
-                      4.0), // Dodanie wewnętrznego paddingu
+                  padding: const EdgeInsets.all(4.0),
                   child: Text(
                     members,
                     softWrap: true,
@@ -792,7 +753,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             if (_committeeAges.isEmpty)
               Text("Brak danych o wieku członków tej komisji.")
             else ...[
-              // Wyświetlamy wykres i dane statystyczne
               Text("Statystyki wieku członków komisji",
                   style: TextStyle(fontSize: 16)),
               SizedBox(height: 16),
@@ -847,12 +807,19 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.bar_chart, size: 32),
-            SizedBox(width: 8),
-            Text('Statystyki', style: TextStyle(fontSize: 24)),
-          ],
+        centerTitle: true, // Wyśrodkowanie tytułu
+        title: Padding(
+          padding: const EdgeInsets.only(top: 20.0),
+          child: Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // Wyśrodkowanie w poziomie
+            mainAxisSize: MainAxisSize.min, // Minimalny rozmiar Row
+            children: [
+              Icon(Icons.bar_chart, size: 32),
+              SizedBox(width: 8),
+              Text('Statystyki', style: TextStyle(fontSize: 24)),
+            ],
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -878,8 +845,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 }
 
-//Wykres szczegolowe wiek
-
 // Funkcja do obliczenia statystyk wieku
 Map<String, dynamic> calculateAgeStats(List<int> ages) {
   ages.sort();
@@ -903,7 +868,6 @@ Map<String, dynamic> calculateAgeStats(List<int> ages) {
 }
 
 Widget buildAgeHistogram(List<int> ages) {
-  // Podział wieku na przedziały (np. 30-35, 36-40)
   Map<String, int> ageBins = {};
   for (int age in ages) {
     int binStart = (age ~/ 10) * 10;
