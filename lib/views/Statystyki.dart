@@ -213,19 +213,19 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         },
       ];
 
-      int total_votes =
-          history.fold(0, (sum, d) => sum + (d["Uzyskane głosy"] as int));
-      history.add({
-        "Kadencja": "Łącznie",
-        "Klub": "${_mpsList.length} unikalnych klubów",
-        "Okrąg": "${_mpsList.length} unikalnych okręgów",
-        "Województwo": "${_mpsList.length} unikalnych województw",
-        "Edukacja":
-            "${_mpsList.map((mp) => mp.educationLevel).toSet().length} unikalnych poziomów edukacji",
-        "Uzyskane głosy": total_votes,
-        "Profesja":
-            "${_mpsList.map((mp) => mp.profession ?? "Brak").toSet().length} unikalnych zawodów",
-      });
+      // int total_votes =
+      //     history.fold(0, (sum, d) => sum + (d["Uzyskane głosy"] as int));
+      // history.add({
+      //   "Kadencja": "Łącznie",
+      //   "Klub": "${_mpsList.length} unikalnych klubów",
+      //   "Okrąg": "${_mpsList.length} unikalnych okręgów",
+      //   "Województwo": "${_mpsList.length} unikalnych województw",
+      //   "Edukacja":
+      //       "${_mpsList.map((mp) => mp.educationLevel).toSet().length} unikalnych poziomów edukacji",
+      //   "Uzyskane głosy": total_votes,
+      //   "Profesja":
+      //       "${_mpsList.map((mp) => mp.profession ?? "Brak").toSet().length} unikalnych zawodów",
+      // });
 
       setState(() {
         _historyOfMp = history;
