@@ -678,7 +678,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             .map((c) => DataColumn(
                 label: Text(c,
                     style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold))))
+                        TextStyle(fontSize: 10, fontWeight: FontWeight.bold))))
             .toList(),
         rows: clubs.entries.map((e) {
           final clubName = e.key;

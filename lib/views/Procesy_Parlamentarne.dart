@@ -4,10 +4,10 @@ import '../controllers/mps_stats_controller.dart';
 
 class View2 extends StatefulWidget {
   @override
-  _View1State createState() => _View1State();
+  _View2State createState() => _View2State();
 }
 
-class _View1State extends State<View2> with SingleTickerProviderStateMixin {
+class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final MyModel _model = MyModel();
   late MyController _controller;
   late TabController _tabController;
@@ -29,12 +29,18 @@ class _View1State extends State<View2> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.bar_chart, size: 32), // Replace with your custom icon
-            SizedBox(width: 8),
-            Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
-          ],
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 20.0), // Przesunięcie w dół
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.bar_chart, size: 32),
+              SizedBox(width: 8),
+              Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
+            ],
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -67,19 +73,18 @@ class _View1State extends State<View2> with SingleTickerProviderStateMixin {
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          Center(
-              child: Text(
-                  'Interpelacje content here')), // Replace with your content
-          Center(child: Text('Ustawy content here')),
-          Center(
-              child: Text('Komisje content here')), // Replace with your content
-          Center(
-              child: Text(
-                  'Głosowania Posłów content here')), // Replace with your content
-        ],
+      body: Padding(
+        padding:
+            const EdgeInsets.only(top: 20.0), // Przesunięcie zawartości w dół
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            Center(child: Text('Interpelacje content here')),
+            Center(child: Text('Ustawy content here')),
+            Center(child: Text('Komisje content here')),
+            Center(child: Text('Głosowania Posłów content here')),
+          ],
+        ),
       ),
     );
   }
