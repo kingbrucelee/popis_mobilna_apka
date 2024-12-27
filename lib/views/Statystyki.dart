@@ -1,3 +1,4 @@
+// Added code start
 import 'package:flutter/material.dart';
 import '../api_wrappers/committees.dart';
 import '../models/mp.dart'; // Dodany import modelu Mp
@@ -110,40 +111,18 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         _clubsButBetter = Map<String, List<String>>.from(stats['clubs']);
       });
 
-      // Wiek:
       final agesResult =
           await service.getCommitteeMemberAges(_clubsButBetter, term: _value);
       final Map<String, List<int>> mpsAgeMap =
           Map<String, List<int>>.from(agesResult['MPsAge']);
       List<int> allAges = [];
       mpsAgeMap.values.forEach((list) => allAges.addAll(list));
+
       setState(() {
         _committeeAges = allAges;
       });
-
-      // Wykształcenie (to jest kluczowe!):
-      final educationDetails = await service.getCommitteeMemberDetails(
-        _clubsButBetter,
-        term: _value,
-        searchedInfo: 'edukacja',
-      );
-      // educationDetails to Map<String, Map<String, int>>
-      //  gdzie kluczem zewnętrznym jest klub, a wewnętrznym - poziom wykształcenia
-
-      Map<String, int> aggregatedEducation = {};
-      educationDetails.forEach((club, eduMap) {
-        eduMap.forEach((education, count) {
-          // Sumujemy każdy poziom wykształcenia ponad kluby
-          aggregatedEducation[education] =
-              (aggregatedEducation[education] ?? 0) + count;
-        });
-      });
-
-      setState(() {
-        _committeeEducation = aggregatedEducation;
-      });
     } catch (e) {
-      // Obsługa błędów
+      // Obsługa błędów jeśli potrzeba
     }
   }
 
@@ -699,7 +678,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             .map((c) => DataColumn(
                 label: Text(c,
                     style:
-                        TextStyle(fontSize: 10, fontWeight: FontWeight.bold))))
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold))))
             .toList(),
         rows: clubs.entries.map((e) {
           final clubName = e.key;
@@ -815,30 +794,9 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 },
               ),
             ],
-          ] else if (_selectedStat == "edukacja") ...[
-            if (_committeeEducation.isEmpty)
-              Center(
-                child: Text(
-                  "Brak danych o wykształceniu członków tej komisji.",
-                  style: TextStyle(fontSize: 16),
-                ),
-              )
-            else ...[
-              Text(
-                "Statystyki wykształcenia członków komisji",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              buildEducationPieChart(_committeeEducation), // Wykres kołowy
-              SizedBox(height: 16),
-              Text(
-                "Szczegóły wykształcenia:",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              buildEducationDetailsTable(_committeeEducation), // Nowa tabela
-            ],
-          ] else if (_selectedStat == "profesja")
+          ] else if (_selectedStat == "edukacja")
+            Text("Tu pokaż dane edukacji (zaimplementuj według potrzeb)")
+          else if (_selectedStat == "profesja")
             Text("Tu pokaż dane profesji (zaimplementuj według potrzeb)")
         ],
       ),
@@ -959,120 +917,5 @@ Widget buildAgeHistogram(List<int> ages) {
         borderData: FlBorderData(show: false),
       ),
     ),
-  );
-}
-
-// Grupowanie danych odnosnie wyksztalcenia
-Map<String, int> groupEducationLevels(List<Mp> mps) {
-  Map<String, int> educationGroups = {};
-  for (var mp in mps) {
-    final educationLevel =
-        mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
-    educationGroups[educationLevel] =
-        (educationGroups[educationLevel] ?? 0) + 1;
-  }
-  return educationGroups;
-}
-
-// Zmienna o danej komisji
-Map<String, int> _committeeEducation = {};
-
-// Wykres kolowy wyksztalcenia w komisji
-Widget buildEducationPieChart(Map<String, int> educationData) {
-  // Suma wszystkich danych
-  final total = educationData.values.fold(0, (sum, count) => sum + count);
-  if (total == 0) {
-    return Center(
-      child: Text(
-        "Brak danych do wyświetlenia",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  // Kolory dla sekcji wykresu
-  final List<Color> colorList = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.red,
-    Colors.purple,
-    Colors.cyan,
-    Colors.teal,
-    Colors.brown,
-  ];
-
-  int colorIndex = 0;
-
-  return Container(
-    height: 300,
-    padding: EdgeInsets.all(16),
-    child: PieChart(
-      PieChartData(
-        sections: educationData.entries.map((entry) {
-          final percentage = (entry.value / total) * 100;
-          return PieChartSectionData(
-            color: colorList[colorIndex++ % colorList.length],
-            value: entry.value.toDouble(),
-            title: "${percentage.toStringAsFixed(1)}%",
-            radius: 50,
-            titleStyle: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          );
-        }).toList(),
-        sectionsSpace: 4,
-        centerSpaceRadius: 40,
-        borderData: FlBorderData(show: false),
-      ),
-    ),
-  );
-}
-
-Widget buildEducationDetailsTable(Map<String, int> educationData) {
-  return DataTable(
-    columnSpacing: 16.0, // Odstęp między kolumnami
-    dataRowMinHeight: 64.0,
-    dataRowMaxHeight: 64.0,
-    headingRowHeight: 56.0,
-    columns: [
-      DataColumn(
-        label: Text(
-          'Poziom wykształcenia',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
-      DataColumn(
-        label: Text(
-          'Liczba osób',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
-    ],
-    rows: educationData.entries.map((entry) {
-      return DataRow(cells: [
-        DataCell(
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 200, // Maksymalna szerokość kolumny
-            ),
-            child: Text(
-              entry.key,
-              style: TextStyle(fontSize: 12),
-              softWrap: true, // Zawijanie tekstu
-              overflow: TextOverflow.visible, // Widoczny tekst
-            ),
-          ),
-        ),
-        DataCell(
-          Text(
-            entry.value.toString(),
-            style: TextStyle(fontSize: 12),
-          ),
-        ),
-      ]);
-    }).toList(),
   );
 }
