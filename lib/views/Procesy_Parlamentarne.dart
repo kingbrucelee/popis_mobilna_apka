@@ -8,6 +8,8 @@ class View2 extends StatefulWidget {
 
 class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final InterpelationController _interpelationController = InterpelationController(); // Kontroler do obsługi API
+  final MyModel _model = MyModel();
+  late MyController _controller;
   late TabController _tabController;
 
   int _selectedTerm = 10; // Domyślna kadencja
@@ -63,6 +65,18 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             SizedBox(width: 8),
             Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
           ],
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 20.0), // Przesunięcie w dół
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.bar_chart, size: 32),
+              SizedBox(width: 8),
+              Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
+            ],
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -103,6 +117,18 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           Center(child: Text('Komisje content here')),
           Center(child: Text('Głosowania Posłów content here')),
         ],
+      body: Padding(
+        padding:
+            const EdgeInsets.only(top: 20.0), // Przesunięcie zawartości w dół
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            Center(child: Text('Interpelacje content here')),
+            Center(child: Text('Ustawy content here')),
+            Center(child: Text('Komisje content here')),
+            Center(child: Text('Głosowania Posłów content here')),
+          ],
+        ),
       ),
     );
   }
