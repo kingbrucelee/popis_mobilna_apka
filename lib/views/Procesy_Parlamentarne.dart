@@ -7,20 +7,20 @@ class View2 extends StatefulWidget {
 }
 
 class _View2State extends State<View2> with SingleTickerProviderStateMixin {
-  final InterpelationController _interpelationController = InterpelationController(); // Kontroler do obsługi API
+  final InterpelationController _interpelationController =
+      InterpelationController(); // Kontroler do obsługi API
   late TabController _tabController;
 
   int _selectedTerm = 10; // Domyślna kadencja
   int _selectedInterpelation = 1; // Domyślny numer interpelacji
-  Map<String,
-      dynamic>? _interpelationDetails; // Szczegóły wybranej interpelacji
+  Map<String, dynamic>?
+      _interpelationDetails; // Szczegóły wybranej interpelacji
   bool _isLoading = false; // Status ładowania danych
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-
   }
 
   @override
@@ -33,7 +33,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     setState(() {
       _isLoading = true;
       _interpelationDetails =
-      null; // Resetowanie szczegółów przed nowym pobraniem
+          null; // Resetowanie szczegółów przed nowym pobraniem
     });
 
     try {
@@ -148,8 +148,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           _isLoading
               ? CircularProgressIndicator()
               : _interpelationDetails == null
-              ? Text('Wprowadź dane i kliknij "Pokaż".')
-              : _buildInterpelationDetails(),
+                  ? Text('Wprowadź dane i kliknij "Pokaż".')
+                  : _buildInterpelationDetails(),
         ],
       ),
     );
@@ -174,5 +174,4 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       ],
     );
   }
-
 }
