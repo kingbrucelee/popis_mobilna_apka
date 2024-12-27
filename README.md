@@ -1,4 +1,4 @@
-# test_example
+# aplikacja mobilna popis
 
 A new Flutter project.
 
