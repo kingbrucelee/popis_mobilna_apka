@@ -558,7 +558,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       // Nowa funkcja: grupowanie edukacji według partii.
       final Map<String, Map<String, int>> partyEducationMap =
           groupEducationLevelsByParty(_mpsList);
-
+      partyEducationMap.remove("niez.");
       if (partyEducationMap.isEmpty) {
         return Center(
           child: Text("Brak danych o wykształceniu posłów."),
@@ -1042,29 +1042,46 @@ Map<String, int> groupEducationLevels(List<Mp> mps) {
 Map<String, int> _committeeEducation = {};
 
 // Wykres kołowy wykształcenia (wykorzystywany zarówno w Komisji, jak i Posłach)
+// Define a fixed list of colors for each category
+final List<Color> sectionColors = [
+  Colors.blue, // Higher education
+  Colors.green, // Vocational education
+  Colors.orange, // Secondary non-vocational education
+  Colors.purple, // General secondary education
+];
+
+// Updated pie chart function with better label positioning
+// Zmienna z kolorami sekcji
+// Funkcja do tworzenia etykiety
+Widget _buildLabelWidget(String text, Color color) {
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(4),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 2,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+    ),
+  );
+}
+
+// Funkcja budująca wykres kołowy z poprawkami
 Widget buildEducationPieChart(Map<String, int> educationData) {
-  // Obliczamy sumę wszystkich posłów
   final rawTotal = educationData.values.fold(0, (sum, count) => sum + count);
-
-  // Jeżeli mamy powyżej 460, skalujemy poszczególne wartości
-  Map<String, int> scaledEducationData = {};
-  if (rawTotal > 460) {
-    double scaleFactor = 460 / rawTotal;
-    educationData.forEach((eduLevel, count) {
-      scaledEducationData[eduLevel] = (count * scaleFactor).round();
-    });
-  } else {
-    scaledEducationData.addAll(educationData);
-  }
-
-  // Obliczamy sumę już po ewentualnym skalowaniu
-  final total = scaledEducationData.values.fold(0, (sum, count) => sum + count);
-
-  // Jeśli po zaokrągleniach znowu przekroczymy 460 (np. przez błąd w dzieleniu),
-  // można ewentualnie jeszcze raz przyciąć nadwyżkę ręcznie.
-  // Natomiast w większości przypadków powyższe powinno wystarczyć.
-
-  if (total == 0) {
+  if (rawTotal == 0) {
     return Center(
       child: Text(
         "Brak danych do wyświetlenia",
@@ -1073,47 +1090,70 @@ Widget buildEducationPieChart(Map<String, int> educationData) {
     );
   }
 
-  // Definiujemy listę kolorów dla poszczególnych kawałków wykresu
-  final List<Color> colorList = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.red,
-    Colors.purple,
-    Colors.cyan,
-    Colors.teal,
-    Colors.brown,
-  ];
-
   int colorIndex = 0;
 
-  // Tworzymy listę sekcji wykresu w oparciu o przeskalowane dane
-  final sections = scaledEducationData.entries.map((entry) {
-    final double percentage = (entry.value / total) * 100;
+  final sections = educationData.entries.map((entry) {
+    final double percentage = (entry.value / rawTotal) * 100;
+
+    // Dynamiczne przesunięcie w zależności od wielkości sekcji
+    final double sectionValue =
+        percentage < 5 ? entry.value.toDouble() + 4 : entry.value.toDouble();
+
+    final double dynamicOffset = sectionValue > rawTotal * 0.1
+        ? 1.4 // Standardowe przesunięcie dla większych sekcji
+        : 1.4; // Większe przesunięcie dla mniejszych sekcji
+
     return PieChartSectionData(
-      color: colorList[colorIndex++ % colorList.length],
-      value: entry.value.toDouble(),
-      title: "${percentage.toStringAsFixed(1)}%",
-      radius: 50,
-      titleStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
+      color: sectionColors[colorIndex++ % sectionColors.length],
+      value: sectionValue,
+      radius: 60, // Rozmiar sekcji
+      title: '',
+      badgeWidget: _buildLabelWidget(
+        '${percentage.toStringAsFixed(1)}%',
+        sectionColors[colorIndex - 1],
       ),
+      badgePositionPercentageOffset: dynamicOffset,
     );
   }).toList();
 
-  return Container(
-    height: 300,
-    padding: EdgeInsets.all(16),
-    child: PieChart(
-      PieChartData(
-        sections: sections,
-        sectionsSpace: 4,
-        centerSpaceRadius: 40,
-        borderData: FlBorderData(show: false),
+  return Column(
+    children: [
+      Container(
+        height: 300,
+        padding: EdgeInsets.all(16),
+        child: PieChart(
+          PieChartData(
+            sections: sections,
+            sectionsSpace: 3, // Odstępy między sekcjami
+            centerSpaceRadius: 40, // Środkowa przestrzeń
+            borderData: FlBorderData(show: false),
+          ),
+        ),
       ),
-    ),
+      SizedBox(height: 16),
+      Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        children: educationData.entries.map((entry) {
+          final int index = educationData.keys.toList().indexOf(entry.key);
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                color: sectionColors[index % sectionColors.length],
+              ),
+              SizedBox(width: 8),
+              Text(
+                entry.key,
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    ],
   );
 }
 
