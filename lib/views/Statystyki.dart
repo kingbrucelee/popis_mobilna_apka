@@ -10,7 +10,6 @@ class MyController {
   final MyModel model;
   MyController(this.model);
 }
-// Added code end
 
 class View1 extends StatefulWidget {
   @override
@@ -380,7 +379,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     final statsOptions = [
       "brak",
       "wiek",
-      "edukacja",
+      "edukacja", // <-- to nas interesuje szczególnie
       "profesja",
       "okręg",
       "województwo"
@@ -492,7 +491,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             if (_historyOfMp.isNotEmpty) _buildMpHistoryTable(_historyOfMp),
             SizedBox(height: 16),
             _selectedMpStat != "brak"
-                ? _buildMpStatistics()
+                ? _buildMpStatistics() // wywołanie statystyk
                 : SizedBox.shrink(),
           ],
         ],
@@ -501,6 +500,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 
   Widget _buildMpStatistics() {
+    // Poniżej dodajemy kolejne statystyki w zależności od wybranej opcji
     if (_selectedMpStat == "wiek") {
       List<int> ages = _mpsList.where((mp) => mp.birthDate != null).map((mp) {
         DateTime birthDate = DateTime.parse(mp.birthDate!);
@@ -550,6 +550,66 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
               ]),
             ],
           ),
+        ],
+      );
+
+      // NOWE: sekcja „edukacja” w zakładce „Posłowie”
+    } else if (_selectedMpStat == "edukacja") {
+      // Nowa funkcja: grupowanie edukacji według partii.
+      final Map<String, Map<String, int>> partyEducationMap =
+          groupEducationLevelsByParty(_mpsList);
+
+      if (partyEducationMap.isEmpty) {
+        return Center(
+          child: Text("Brak danych o wykształceniu posłów."),
+        );
+      }
+
+      // Renderujemy osobny wykres (i tabelę) dla każdej partii
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Statystyki wykształcenia posłów wg klubów/partii",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+          // Listujemy każdą partię i jej mapę wykształcenia
+          ...partyEducationMap.entries.map((entry) {
+            final partyName = entry.key;
+            final educationData = entry.value;
+
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 8),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      partyName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    // Wykres kołowy zliczający poziomy wykształcenia w danej partii
+                    buildEducationPieChart(educationData),
+                    SizedBox(height: 16),
+                    Text(
+                      "Szczegóły wykształcenia:",
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    buildEducationDetailsTable(educationData),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ],
       );
     } else {
@@ -836,7 +896,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 16),
-              buildEducationDetailsTable(_committeeEducation), // Nowa tabela
+              buildEducationDetailsTable(_committeeEducation),
             ],
           ] else if (_selectedStat == "profesja")
             Text("Tu pokaż dane profesji (zaimplementuj według potrzeb)")
@@ -887,6 +947,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 }
 
+// ============================= Pomocnicze funkcje =============================
+
 // Funkcja do obliczenia statystyk wieku
 Map<String, dynamic> calculateAgeStats(List<int> ages) {
   ages.sort();
@@ -909,6 +971,7 @@ Map<String, dynamic> calculateAgeStats(List<int> ages) {
   };
 }
 
+// Wykres słupkowy wieku
 Widget buildAgeHistogram(List<int> ages) {
   Map<String, int> ageBins = {};
   for (int age in ages) {
@@ -962,10 +1025,11 @@ Widget buildAgeHistogram(List<int> ages) {
   );
 }
 
-// Grupowanie danych odnosnie wyksztalcenia
+// Grupowanie danych odnośnie wykształcenia dla listy posłów
 Map<String, int> groupEducationLevels(List<Mp> mps) {
   Map<String, int> educationGroups = {};
   for (var mp in mps) {
+    // Zakładamy, że w modelu Mp jest pole `educationLevel`
     final educationLevel =
         mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
     educationGroups[educationLevel] =
@@ -977,10 +1041,29 @@ Map<String, int> groupEducationLevels(List<Mp> mps) {
 // Zmienna o danej komisji
 Map<String, int> _committeeEducation = {};
 
-// Wykres kolowy wyksztalcenia w komisji
+// Wykres kołowy wykształcenia (wykorzystywany zarówno w Komisji, jak i Posłach)
 Widget buildEducationPieChart(Map<String, int> educationData) {
-  // Suma wszystkich danych
-  final total = educationData.values.fold(0, (sum, count) => sum + count);
+  // Obliczamy sumę wszystkich posłów
+  final rawTotal = educationData.values.fold(0, (sum, count) => sum + count);
+
+  // Jeżeli mamy powyżej 460, skalujemy poszczególne wartości
+  Map<String, int> scaledEducationData = {};
+  if (rawTotal > 460) {
+    double scaleFactor = 460 / rawTotal;
+    educationData.forEach((eduLevel, count) {
+      scaledEducationData[eduLevel] = (count * scaleFactor).round();
+    });
+  } else {
+    scaledEducationData.addAll(educationData);
+  }
+
+  // Obliczamy sumę już po ewentualnym skalowaniu
+  final total = scaledEducationData.values.fold(0, (sum, count) => sum + count);
+
+  // Jeśli po zaokrągleniach znowu przekroczymy 460 (np. przez błąd w dzieleniu),
+  // można ewentualnie jeszcze raz przyciąć nadwyżkę ręcznie.
+  // Natomiast w większości przypadków powyższe powinno wystarczyć.
+
   if (total == 0) {
     return Center(
       child: Text(
@@ -990,7 +1073,7 @@ Widget buildEducationPieChart(Map<String, int> educationData) {
     );
   }
 
-  // Kolory dla sekcji wykresu
+  // Definiujemy listę kolorów dla poszczególnych kawałków wykresu
   final List<Color> colorList = [
     Colors.blue,
     Colors.green,
@@ -1004,25 +1087,28 @@ Widget buildEducationPieChart(Map<String, int> educationData) {
 
   int colorIndex = 0;
 
+  // Tworzymy listę sekcji wykresu w oparciu o przeskalowane dane
+  final sections = scaledEducationData.entries.map((entry) {
+    final double percentage = (entry.value / total) * 100;
+    return PieChartSectionData(
+      color: colorList[colorIndex++ % colorList.length],
+      value: entry.value.toDouble(),
+      title: "${percentage.toStringAsFixed(1)}%",
+      radius: 50,
+      titleStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    );
+  }).toList();
+
   return Container(
     height: 300,
     padding: EdgeInsets.all(16),
     child: PieChart(
       PieChartData(
-        sections: educationData.entries.map((entry) {
-          final percentage = (entry.value / total) * 100;
-          return PieChartSectionData(
-            color: colorList[colorIndex++ % colorList.length],
-            value: entry.value.toDouble(),
-            title: "${percentage.toStringAsFixed(1)}%",
-            radius: 50,
-            titleStyle: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          );
-        }).toList(),
+        sections: sections,
         sectionsSpace: 4,
         centerSpaceRadius: 40,
         borderData: FlBorderData(show: false),
@@ -1061,8 +1147,8 @@ Widget buildEducationDetailsTable(Map<String, int> educationData) {
             child: Text(
               entry.key,
               style: TextStyle(fontSize: 12),
-              softWrap: true, // Zawijanie tekstu
-              overflow: TextOverflow.visible, // Widoczny tekst
+              softWrap: true,
+              overflow: TextOverflow.visible,
             ),
           ),
         ),
@@ -1075,4 +1161,29 @@ Widget buildEducationDetailsTable(Map<String, int> educationData) {
       ]);
     }).toList(),
   );
+}
+
+/// Grupuje posłów według klubu (partii) i poziomu wykształcenia.
+/// Zwraca mapę: { "PiS": {"wyższe": 10, "średnie": 5, ...}, "PO": {...}, ... }
+Map<String, Map<String, int>> groupEducationLevelsByParty(List<Mp> mps) {
+  Map<String, Map<String, int>> result = {};
+
+  for (var mp in mps) {
+    // Wydobywamy nazwę partii/klubu:
+    final party = mp.club.isNotEmpty ? mp.club : "Niezrzeszeni";
+
+    // Poziom wykształcenia:
+    final educationLevel =
+        mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
+
+    // Inicjalizacja wpisu w mapie, jeśli nie istnieje:
+    if (!result.containsKey(party)) {
+      result[party] = {};
+    }
+
+    // Zwiększamy licznik dla danej partii i poziomu wykształcenia
+    result[party]![educationLevel] = (result[party]![educationLevel] ?? 0) + 1;
+  }
+
+  return result;
 }
