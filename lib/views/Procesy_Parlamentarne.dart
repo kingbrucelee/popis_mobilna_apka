@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../controllers/interpelation_controller.dart'; // Kontroler do obsługi API
-import '../controllers/committee_controller.dart'; // Kontroler do obsługi API
+import '../controllers/interpelation_controller.dart';
+import '../controllers/committee_controller.dart';
+import '../controllers/voting_controller.dart';
 
 class View2 extends StatefulWidget {
   @override
@@ -12,6 +13,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       InterpelationController(); // Kontroler do obsługi API
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
+  final VotingController _votingController = VotingController(); // Kontroler do obsługi głosowań
 
   late TabController _tabController;
 
@@ -27,6 +29,13 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   List<String> _recentMeetings = []; // Ostatnie posiedzenia
   List<Map<String, dynamic>> _committeePresidium = []; // Prezydium komisji
 
+  List<Map<String, dynamic>> _mps = []; // Lista posłów
+  Map<String, dynamic>? _selectedMp; // Wybrany poseł
+  List<int> _proceedingNumbers = []; // Lista numerów posiedzeń
+  int? _selectedProceedingNumber; // Wybrany numer posiedzenia
+  List<String> _votingDates = []; // Lista dat głosowań
+  String? _selectedVotingDate; // Wybrana data głosowania
+  List<Map<String, dynamic>> _votingDetails = []; // Szczegóły głosowań
 
 
   @override
@@ -137,6 +146,98 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   }
 
 
+  Future<void> fetchMps() async {
+    setState(() {
+      _isLoading = true;
+      _mps = [];
+    });
+
+    try {
+      final mps = await _votingController.getMps(_selectedTerm);
+      setState(() {
+        _mps = mps;
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania posłów: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> fetchProceedingNumbers() async {
+    setState(() {
+      _isLoading = true;
+      _proceedingNumbers = [];
+    });
+
+    try {
+      final proceedingNumbers = await _votingController.getProceedingNumbers(_selectedTerm);
+      setState(() {
+        _proceedingNumbers = proceedingNumbers;
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania numerów posiedzeń: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> fetchVotingDates() async {
+    if (_selectedProceedingNumber == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _votingDates = [];
+    });
+
+    try {
+      final votingDates = await _votingController.getVotingDates(
+        _selectedTerm,
+        _selectedProceedingNumber!,
+      );
+      setState(() {
+        _votingDates = votingDates;
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania dat głosowań: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> fetchVotingDetails() async {
+    if (_selectedMp == null || _selectedProceedingNumber == null || _selectedVotingDate == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _votingDetails = [];
+    });
+
+    try {
+      final votingDetails = await _votingController.getVotingDetails(
+        _selectedTerm,
+        _selectedMp!['id'],
+        _selectedProceedingNumber!,
+        _selectedVotingDate!,
+      );
+      setState(() {
+        _votingDetails = votingDetails;
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania szczegółów głosowań: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -185,7 +286,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           _buildInterpelationTab(), // Zakładka Interpelacje
           Center(child: Text('Ustawy content here')),
           _buildCommitteesTab(),
-          Center(child: Text('Głosowania Posłów content here')),
+          _buildVotingTab(),
         ],
       ),
     );
@@ -360,6 +461,150 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           ]))
               .toList(),
         ),
+      ],
+    );
+  }
+
+  Widget _buildVotingTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedTerm = int.tryParse(value) ?? 10;
+                    });
+                  },
+                ),
+              ),
+              SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: fetchMps,
+                child: Text('Pobierz posłów'),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          _isLoading
+              ? CircularProgressIndicator()
+              : _mps.isEmpty
+              ? Text('Brak posłów do wyświetlenia.')
+              : Column(
+            children: [
+              DropdownButton<Map<String, dynamic>>(
+                isExpanded: true,
+                value: _selectedMp,
+                hint: Text('Wybierz posła'),
+                items: _mps
+                    .map((mp) => DropdownMenuItem<Map<String, dynamic>>(
+                  value: mp,
+                  child: Text(mp['lastFirstName']),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedMp = value;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: fetchProceedingNumbers,
+                child: Text('Pobierz numery posiedzeń'),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          _proceedingNumbers.isEmpty
+              ? Text('Brak numerów posiedzeń do wyświetlenia.')
+              : Column(
+            children: [
+              DropdownButton<int>(
+                isExpanded: true,
+                value: _selectedProceedingNumber,
+                hint: Text('Wybierz numer posiedzenia'),
+                items: _proceedingNumbers
+                    .map((number) => DropdownMenuItem<int>(
+                  value: number,
+                  child: Text(number.toString()),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedProceedingNumber = value;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: fetchVotingDates,
+                child: Text('Pobierz daty głosowań'),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          _votingDates.isEmpty
+              ? Text('Brak dat głosowań do wyświetlenia.')
+              : Column(
+            children: [
+              DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedVotingDate,
+                hint: Text('Wybierz datę głosowania'),
+                items: _votingDates
+                    .map((date) => DropdownMenuItem<String>(
+                  value: date,
+                  child: Text(date),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedVotingDate = value;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: fetchVotingDetails,
+                child: Text('Pokaż głosowania'),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          _isLoading
+              ? CircularProgressIndicator()
+              : _votingDetails.isEmpty
+              ? Text('Brak szczegółów głosowań do wyświetlenia.')
+              : _buildVotingDetails(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVotingDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Szczegóły Głosowań:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ..._votingDetails.map((voting) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Numer głosowania: ${voting['votingNumber']}'),
+              Text('Temat: ${voting['topic'] ?? 'Brak tematu'}'),
+              Text('Głos: ${voting['vote'] ?? 'Brak informacji'}'),
+              Text('Data: ${voting['date']}'),
+            ],
+          ),
+        )),
       ],
     );
   }
