@@ -1,49 +1,33 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/act.dart';
 
-class ActsController {
+class LegislativeController {
   final String baseUrl = "https://api.sejm.gov.pl";
 
-  Future<List<Act>> getAllActsForYear(int year) async {
-    final url = Uri.parse("$baseUrl/eli/acts/DU/$year");
-    final response = await http.get(url);
-
+  Future<List<Map<String, dynamic>>> fetchLegislativeProcesses(int term) async {
+    final response = await http.get(Uri.parse('$baseUrl/sejm/term$term/processes'));
     if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes)); // Obsługa polskich znaków
-      final List<dynamic> items = data['items'] ?? [];
-
-      // Tworzenie listy aktów prawnych
-      return items
-          .map((item) => Act(
-        title: item['title'] ?? 'Brak tytułu',
-        type: item['type'] ?? 'Nieznany typ',
-      ))
-          .toList();
+      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
     } else {
-      throw Exception('Błąd podczas pobierania danych: ${response.statusCode}');
+      throw Exception('Failed to load legislative processes');
     }
   }
 
-  Future<Map<String, dynamic>> getProcessDetails(int term, String processNumber) async {
-    final url = Uri.parse("$baseUrl/sejm/term$term/processes/$processNumber");
-    final response = await http.get(url);
-
+  Future<Map<String, dynamic>> fetchProcessDetails(int term, String processNumber) async {
+    final response = await http.get(Uri.parse('$baseUrl/sejm/term$term/processes/$processNumber'));
     if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes)); // Obsługa polskich znaków
+      return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
     } else {
-      throw Exception('Błąd podczas pobierania szczegółów procesu: ${response.statusCode}');
+      throw Exception('Failed to load process details');
     }
   }
 
-  Future<List<dynamic>> getLegislativeProcesses(int term) async {
-    final url = Uri.parse("$baseUrl/sejm/term$term/processes");
-    final response = await http.get(url);
-
+  Future<List<Map<String, dynamic>>> fetchLatestLaws(int year) async {
+    final response = await http.get(Uri.parse('$baseUrl/eli/acts/DU/$year'));
     if (response.statusCode == 200) {
-      return jsonDecode(utf8.decode(response.bodyBytes)); // Obsługa polskich znaków
+      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes))['items'] ?? []);
     } else {
-      throw Exception('Błąd podczas pobierania procesów: ${response.statusCode}');
+      throw Exception('Failed to load laws');
     }
   }
 }

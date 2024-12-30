@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../controllers/interpelation_controller.dart';
 import '../controllers/committee_controller.dart';
 import '../controllers/voting_controller.dart';
+import '../controllers/acts_controller.dart';
 
 class View2 extends StatefulWidget {
   @override
@@ -14,6 +15,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
   final VotingController _votingController = VotingController(); // Kontroler do obsługi głosowań
+
+  final LegislativeController _legislativeController = LegislativeController();
 
   late TabController _tabController;
 
@@ -36,6 +39,12 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   List<String> _votingDates = []; // Lista dat głosowań
   String? _selectedVotingDate; // Wybrana data głosowania
   List<Map<String, dynamic>> _votingDetails = []; // Szczegóły głosowań
+
+  List<Map<String, dynamic>> _legislativeProcesses = [];
+  Map<String, dynamic>? _processDetails;
+  List<Map<String, dynamic>> _latestLaws = [];
+  String? _selectedProcess;
+  int _selectedYear = DateTime.now().year;
 
 
   @override
@@ -67,6 +76,45 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       });
     } catch (e) {
       print('Błąd podczas ładowania szczegółów interpelacji: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void fetchLegislativeProcesses() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      _legislativeProcesses = await _legislativeController.fetchLegislativeProcesses(_selectedTerm);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void fetchProcessDetails(String processNumber) async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      _processDetails = await _legislativeController.fetchProcessDetails(_selectedTerm, processNumber);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void fetchLatestLaws() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      _latestLaws = await _legislativeController.fetchLatestLaws(_selectedYear);
     } finally {
       setState(() {
         _isLoading = false;
@@ -284,7 +332,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         controller: _tabController,
         children: [
           _buildInterpelationTab(), // Zakładka Interpelacje
-          Center(child: Text('Ustawy content here')),
+          _buildLawsTab(),
           _buildCommitteesTab(),
           _buildVotingTab(),
         ],
@@ -464,6 +512,124 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       ],
     );
   }
+
+  Widget _buildLawsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedTerm = int.tryParse(value) ?? 10;
+                    });
+                  },
+                ),
+              ),
+              SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: fetchLegislativeProcesses,
+                child: Text('Pobierz procesy legislacyjne'),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          _isLoading
+              ? CircularProgressIndicator()
+              : _legislativeProcesses.isEmpty
+              ? Text('Brak dostępnych procesów legislacyjnych.')
+              : DropdownButton<String>(
+            isExpanded: true,
+            value: _selectedProcess,
+            hint: Text('Wybierz proces legislacyjny'),
+            items: _legislativeProcesses
+                .map((process) => DropdownMenuItem<String>(
+              value: process['number'],
+              child: Text('${process['number']} - ${process['title']}'),
+            ))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedProcess = value;
+              });
+              if (value != null) {
+                fetchProcessDetails(value);
+              }
+            },
+          ),
+          SizedBox(height: 16),
+          _processDetails == null
+              ? Text('Wybierz proces, aby zobaczyć szczegóły.')
+              : _buildProcessDetails(),
+          Divider(),
+          TextField(
+            decoration: InputDecoration(labelText: 'Rok'),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              setState(() {
+                _selectedYear = int.tryParse(value) ?? DateTime.now().year;
+              });
+            },
+          ),
+          SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: fetchLatestLaws,
+            child: Text('Pobierz ostatnie akty prawne'),
+          ),
+          SizedBox(height: 16),
+          _isLoading
+              ? CircularProgressIndicator()
+              : _latestLaws.isEmpty
+              ? Text('Brak dostępnych aktów prawnych.')
+              : Expanded(
+            child: ListView(
+              children: _latestLaws.map((law) {
+                return ListTile(
+                  title: Text(law['title']),
+                  subtitle: Text('Typ: ${law['type']}'),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessDetails() {
+    if (_processDetails == null) {
+      return Text('Brak szczegółów do wyświetlenia.');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Szczegóły procesu legislacyjnego:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text('Tytuł: ${_processDetails!['title'] ?? 'Brak tytułu'}'),
+        Text('Opis: ${_processDetails!['description'] ?? 'Brak opisu'}'),
+        Text('Data rozpoczęcia: ${_processDetails!['processStartDate'] ?? 'Brak daty'}'),
+        SizedBox(height: 16),
+        Text('Etapy procesu:', style: TextStyle(fontWeight: FontWeight.bold)),
+        ...(_processDetails!['stages'] ?? []).map((stage) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Etap: ${stage['stageName']}'),
+              Text('Data: ${stage['dates'] ?? 'Brak daty'}'),
+              Text('Decyzja: ${stage['decision'] ?? 'Brak decyzji'}'),
+              Divider(),
+            ],
+          );
+        }).toList(),
+      ],
+    );
+  }
+
 
   Widget _buildVotingTab() {
     return Padding(
