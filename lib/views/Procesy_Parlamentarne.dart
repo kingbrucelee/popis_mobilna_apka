@@ -14,7 +14,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       InterpelationController(); // Kontroler do obsługi API
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
-  final VotingController _votingController = VotingController(); // Kontroler do obsługi głosowań
+  final VotingController _votingController =
+      VotingController(); // Kontroler do obsługi głosowań
 
   final LegislativeController _legislativeController = LegislativeController();
 
@@ -45,7 +46,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _latestLaws = [];
   String? _selectedProcess;
   int _selectedYear = DateTime.now().year;
-
 
   @override
   void initState() {
@@ -88,7 +88,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       _isLoading = true;
     });
     try {
-      _legislativeProcesses = await _legislativeController.fetchLegislativeProcesses(_selectedTerm);
+      _legislativeProcesses =
+          await _legislativeController.fetchLegislativeProcesses(_selectedTerm);
     } finally {
       setState(() {
         _isLoading = false;
@@ -101,7 +102,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       _isLoading = true;
     });
     try {
-      _processDetails = await _legislativeController.fetchProcessDetails(_selectedTerm, processNumber);
+      _processDetails = await _legislativeController.fetchProcessDetails(
+          _selectedTerm, processNumber);
     } finally {
       setState(() {
         _isLoading = false;
@@ -114,7 +116,16 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       _isLoading = true;
     });
     try {
-      _latestLaws = await _legislativeController.fetchLatestLaws(_selectedYear);
+      // Pobierz wszystkie akty prawne dla danego roku
+      List<Map<String, dynamic>> allLaws =
+          await _legislativeController.fetchLatestLaws(_selectedYear);
+
+      // Pobierz tylko ostatnie 10
+      setState(() {
+        _latestLaws = allLaws.take(10).toList();
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania ostatnich aktów prawnych: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -193,7 +204,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     }
   }
 
-
   Future<void> fetchMps() async {
     setState(() {
       _isLoading = true;
@@ -221,7 +231,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     });
 
     try {
-      final proceedingNumbers = await _votingController.getProceedingNumbers(_selectedTerm);
+      final proceedingNumbers =
+          await _votingController.getProceedingNumbers(_selectedTerm);
       setState(() {
         _proceedingNumbers = proceedingNumbers;
       });
@@ -260,7 +271,9 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   }
 
   Future<void> fetchVotingDetails() async {
-    if (_selectedMp == null || _selectedProceedingNumber == null || _selectedVotingDate == null) return;
+    if (_selectedMp == null ||
+        _selectedProceedingNumber == null ||
+        _selectedVotingDate == null) return;
 
     setState(() {
       _isLoading = true;
@@ -412,9 +425,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     );
   }
 
-
-
-
   Widget _buildCommitteesTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -473,9 +483,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     );
   }
 
-
-
-
   Widget _buildCommitteeDetails() {
     if (_committeeDetails == null) {
       return Text('Brak szczegółów do wyświetlenia.');
@@ -498,17 +505,17 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         _committeePresidium.isEmpty
             ? Text('Brak danych o prezydium.')
             : DataTable(
-          columns: [
-            DataColumn(label: Text('Imię i nazwisko')),
-            DataColumn(label: Text('Stanowisko')),
-          ],
-          rows: _committeePresidium
-              .map((member) => DataRow(cells: [
-            DataCell(Text(member['name'])),
-            DataCell(Text(member['position'])),
-          ]))
-              .toList(),
-        ),
+                columns: [
+                  DataColumn(label: Text('Imię i nazwisko')),
+                  DataColumn(label: Text('Stanowisko')),
+                ],
+                rows: _committeePresidium
+                    .map((member) => DataRow(cells: [
+                          DataCell(Text(member['name'])),
+                          DataCell(Text(member['position'])),
+                        ]))
+                    .toList(),
+              ),
       ],
     );
   }
@@ -516,87 +523,92 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   Widget _buildLawsTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTerm = int.tryParse(value) ?? 10;
-                    });
-                  },
+      child: SingleChildScrollView(
+        // Add this to make content scrollable
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
+                  ),
                 ),
-              ),
-              SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: fetchLegislativeProcesses,
-                child: Text('Pobierz procesy legislacyjne'),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _legislativeProcesses.isEmpty
-              ? Text('Brak dostępnych procesów legislacyjnych.')
-              : DropdownButton<String>(
-            isExpanded: true,
-            value: _selectedProcess,
-            hint: Text('Wybierz proces legislacyjny'),
-            items: _legislativeProcesses
-                .map((process) => DropdownMenuItem<String>(
-              value: process['number'],
-              child: Text('${process['number']} - ${process['title']}'),
-            ))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedProcess = value;
-              });
-              if (value != null) {
-                fetchProcessDetails(value);
-              }
-            },
-          ),
-          SizedBox(height: 16),
-          _processDetails == null
-              ? Text('Wybierz proces, aby zobaczyć szczegóły.')
-              : _buildProcessDetails(),
-          Divider(),
-          TextField(
-            decoration: InputDecoration(labelText: 'Rok'),
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              setState(() {
-                _selectedYear = int.tryParse(value) ?? DateTime.now().year;
-              });
-            },
-          ),
-          SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: fetchLatestLaws,
-            child: Text('Pobierz ostatnie akty prawne'),
-          ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _latestLaws.isEmpty
-              ? Text('Brak dostępnych aktów prawnych.')
-              : Expanded(
-            child: ListView(
-              children: _latestLaws.map((law) {
-                return ListTile(
-                  title: Text(law['title']),
-                  subtitle: Text('Typ: ${law['type']}'),
-                );
-              }).toList(),
+                SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: fetchLegislativeProcesses,
+                  child: Text('Pobierz procesy legislacyjne'),
+                ),
+              ],
             ),
-          ),
-        ],
+            SizedBox(height: 16),
+            _isLoading
+                ? CircularProgressIndicator()
+                : _legislativeProcesses.isEmpty
+                    ? Text('Brak dostępnych procesów legislacyjnych.')
+                    : DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedProcess,
+                        hint: Text('Wybierz proces legislacyjny'),
+                        items: _legislativeProcesses
+                            .map((process) => DropdownMenuItem<String>(
+                                  value: process['number'],
+                                  child: Text(
+                                      '${process['number']} - ${process['title']}'),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedProcess = value;
+                          });
+                          if (value != null) {
+                            fetchProcessDetails(value);
+                          }
+                        },
+                      ),
+            SizedBox(height: 16),
+            _processDetails == null
+                ? Text('Wybierz proces, aby zobaczyć szczegóły.')
+                : _buildProcessDetails(),
+            Divider(),
+            TextField(
+              decoration: InputDecoration(labelText: 'Rok'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                setState(() {
+                  _selectedYear = int.tryParse(value) ?? DateTime.now().year;
+                });
+              },
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: fetchLatestLaws,
+              child: Text('Pobierz ostatnie akty prawne'),
+            ),
+            SizedBox(height: 16),
+            _isLoading
+                ? CircularProgressIndicator()
+                : _latestLaws.isEmpty
+                    ? Text('Brak dostępnych aktów prawnych.')
+                    : ListView(
+                        shrinkWrap:
+                            true, // Prevent ListView from growing indefinitely
+                        physics: NeverScrollableScrollPhysics(),
+                        children: _latestLaws.map((law) {
+                          return ListTile(
+                            title: Text(law['title']),
+                            subtitle: Text('Typ: ${law['type']}'),
+                          );
+                        }).toList(),
+                      ),
+          ],
+        ),
       ),
     );
   }
@@ -612,7 +624,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         Text('Tytuł: ${_processDetails!['title'] ?? 'Brak tytułu'}'),
         Text('Opis: ${_processDetails!['description'] ?? 'Brak opisu'}'),
-        Text('Data rozpoczęcia: ${_processDetails!['processStartDate'] ?? 'Brak daty'}'),
+        Text(
+            'Data rozpoczęcia: ${_processDetails!['processStartDate'] ?? 'Brak daty'}'),
         SizedBox(height: 16),
         Text('Etapy procesu:', style: TextStyle(fontWeight: FontWeight.bold)),
         ...(_processDetails!['stages'] ?? []).map((stage) {
@@ -629,7 +642,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       ],
     );
   }
-
 
   Widget _buildVotingTab() {
     return Padding(
@@ -660,94 +672,95 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           _isLoading
               ? CircularProgressIndicator()
               : _mps.isEmpty
-              ? Text('Brak posłów do wyświetlenia.')
-              : Column(
-            children: [
-              DropdownButton<Map<String, dynamic>>(
-                isExpanded: true,
-                value: _selectedMp,
-                hint: Text('Wybierz posła'),
-                items: _mps
-                    .map((mp) => DropdownMenuItem<Map<String, dynamic>>(
-                  value: mp,
-                  child: Text(mp['lastFirstName']),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedMp = value;
-                  });
-                },
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: fetchProceedingNumbers,
-                child: Text('Pobierz numery posiedzeń'),
-              ),
-            ],
-          ),
+                  ? Text('Brak posłów do wyświetlenia.')
+                  : Column(
+                      children: [
+                        DropdownButton<Map<String, dynamic>>(
+                          isExpanded: true,
+                          value: _selectedMp,
+                          hint: Text('Wybierz posła'),
+                          items: _mps
+                              .map((mp) =>
+                                  DropdownMenuItem<Map<String, dynamic>>(
+                                    value: mp,
+                                    child: Text(mp['lastFirstName']),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedMp = value;
+                            });
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: fetchProceedingNumbers,
+                          child: Text('Pobierz numery posiedzeń'),
+                        ),
+                      ],
+                    ),
           SizedBox(height: 16),
           _proceedingNumbers.isEmpty
               ? Text('Brak numerów posiedzeń do wyświetlenia.')
               : Column(
-            children: [
-              DropdownButton<int>(
-                isExpanded: true,
-                value: _selectedProceedingNumber,
-                hint: Text('Wybierz numer posiedzenia'),
-                items: _proceedingNumbers
-                    .map((number) => DropdownMenuItem<int>(
-                  value: number,
-                  child: Text(number.toString()),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedProceedingNumber = value;
-                  });
-                },
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: fetchVotingDates,
-                child: Text('Pobierz daty głosowań'),
-              ),
-            ],
-          ),
+                  children: [
+                    DropdownButton<int>(
+                      isExpanded: true,
+                      value: _selectedProceedingNumber,
+                      hint: Text('Wybierz numer posiedzenia'),
+                      items: _proceedingNumbers
+                          .map((number) => DropdownMenuItem<int>(
+                                value: number,
+                                child: Text(number.toString()),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProceedingNumber = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: fetchVotingDates,
+                      child: Text('Pobierz daty głosowań'),
+                    ),
+                  ],
+                ),
           SizedBox(height: 16),
           _votingDates.isEmpty
               ? Text('Brak dat głosowań do wyświetlenia.')
               : Column(
-            children: [
-              DropdownButton<String>(
-                isExpanded: true,
-                value: _selectedVotingDate,
-                hint: Text('Wybierz datę głosowania'),
-                items: _votingDates
-                    .map((date) => DropdownMenuItem<String>(
-                  value: date,
-                  child: Text(date),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedVotingDate = value;
-                  });
-                },
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: fetchVotingDetails,
-                child: Text('Pokaż głosowania'),
-              ),
-            ],
-          ),
+                  children: [
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: _selectedVotingDate,
+                      hint: Text('Wybierz datę głosowania'),
+                      items: _votingDates
+                          .map((date) => DropdownMenuItem<String>(
+                                value: date,
+                                child: Text(date),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedVotingDate = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: fetchVotingDetails,
+                      child: Text('Pokaż głosowania'),
+                    ),
+                  ],
+                ),
           SizedBox(height: 16),
           _isLoading
               ? CircularProgressIndicator()
               : _votingDetails.isEmpty
-              ? Text('Brak szczegółów głosowań do wyświetlenia.')
-              : _buildVotingDetails(),
+                  ? Text('Brak szczegółów głosowań do wyświetlenia.')
+                  : _buildVotingDetails(),
         ],
       ),
     );
@@ -760,17 +773,17 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         Text('Szczegóły Głosowań:',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ..._votingDetails.map((voting) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Numer głosowania: ${voting['votingNumber']}'),
-              Text('Temat: ${voting['topic'] ?? 'Brak tematu'}'),
-              Text('Głos: ${voting['vote'] ?? 'Brak informacji'}'),
-              Text('Data: ${voting['date']}'),
-            ],
-          ),
-        )),
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Numer głosowania: ${voting['votingNumber']}'),
+                  Text('Temat: ${voting['topic'] ?? 'Brak tematu'}'),
+                  Text('Głos: ${voting['vote'] ?? 'Brak informacji'}'),
+                  Text('Data: ${voting['date']}'),
+                ],
+              ),
+            )),
       ],
     );
   }
