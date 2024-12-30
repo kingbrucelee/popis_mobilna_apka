@@ -25,6 +25,9 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _committees = []; // Lista komisji
   Map<String, dynamic>? _committeeDetails; // Szczegóły wybranej komisji
   List<String> _recentMeetings = []; // Ostatnie posiedzenia
+  List<Map<String, dynamic>> _committeePresidium = []; // Prezydium komisji
+
+
 
   @override
   void initState() {
@@ -88,6 +91,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       _isLoading = true;
       _committeeDetails = null;
       _recentMeetings = [];
+      _committeePresidium = [];
     });
 
     try {
@@ -98,6 +102,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       setState(() {
         _committeeDetails = details;
       });
+
+      await fetchCommitteePresidium(code);
     } catch (e) {
       print('Błąd podczas ładowania szczegółów komisji: $e');
     } finally {
@@ -106,6 +112,30 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       });
     }
   }
+
+  Future<void> fetchCommitteePresidium(String code) async {
+    setState(() {
+      _isLoading = true;
+      _committeePresidium = [];
+    });
+
+    try {
+      final presidium = await _committeeController.getCommitteePresidium(
+        _selectedTerm,
+        code,
+      );
+      setState(() {
+        _committeePresidium = presidium;
+      });
+    } catch (e) {
+      print('Błąd podczas ładowania prezydium komisji: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +263,9 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     );
   }
 
+
+
+
   Widget _buildCommitteesTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -291,6 +324,9 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     );
   }
 
+
+
+
   Widget _buildCommitteeDetails() {
     if (_committeeDetails == null) {
       return Text('Brak szczegółów do wyświetlenia.');
@@ -308,6 +344,22 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         Text('Ostatnie posiedzenia:',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ..._recentMeetings.map((meeting) => Text(meeting)).toList(),
+        Text('Prezydium Komisji:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        _committeePresidium.isEmpty
+            ? Text('Brak danych o prezydium.')
+            : DataTable(
+          columns: [
+            DataColumn(label: Text('Imię i nazwisko')),
+            DataColumn(label: Text('Stanowisko')),
+          ],
+          rows: _committeePresidium
+              .map((member) => DataRow(cells: [
+            DataCell(Text(member['name'])),
+            DataCell(Text(member['position'])),
+          ]))
+              .toList(),
+        ),
       ],
     );
   }
