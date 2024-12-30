@@ -9,7 +9,7 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees'));
 
     if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
+      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
     } else {
       throw Exception('Failed to fetch committees');
     }
@@ -20,7 +20,7 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode/sittings'));
 
     if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
+      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
     } else {
       throw Exception('Failed to fetch sittings');
     }
@@ -31,7 +31,7 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode/sittings'));
 
     if (response.statusCode == 200) {
-      final sittings = List<Map<String, dynamic>>.from(json.decode(response.body));
+      final sittings = List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       return sittings.reversed
           .take(count)
           .map((sitting) => "${sitting['date']}. Numer posiedzenia: ${sitting['num']}")
@@ -46,7 +46,7 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode/sittings/$sittingNumber'));
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return jsonDecode(utf8.decode(response.bodyBytes));
     } else {
       throw Exception('Failed to fetch sitting details');
     }
@@ -57,7 +57,7 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$code/sittings'));
 
     if (response.statusCode == 200) {
-      final sittings = List<Map<String, dynamic>>.from(json.decode(response.body));
+      final sittings = List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       final today = DateTime.now();
       final thresholdDate = today.add(Duration(days: days));
 
@@ -76,9 +76,20 @@ class CommitteeController {
     final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode'));
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return jsonDecode(utf8.decode(response.bodyBytes));
     } else {
       throw Exception('Failed to fetch committee details');
+    }
+  }
+
+  /// Fetches presidium of a specific committee
+  Future<List<Map<String, dynamic>>> getCommitteePresidium(int term, String committeeCode) async {
+    final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode/presidium'));
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
+    } else {
+      throw Exception('Failed to fetch committee presidium');
     }
   }
 }
