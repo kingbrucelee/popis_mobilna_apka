@@ -42,6 +42,12 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _historyOfMp = [];
   bool _isLoadingPoslowieData = false;
 
+  // Dodatkowe zmienne do statystyk w Komisjach:
+  List<int> _committeeAges = [];
+  Map<String, int> _committeeEducation = {};
+  Map<String, int> _committeeProfession = {};
+  Map<String, Map<String, int>> _committeeProfessionByParty = {};
+
   @override
   void initState() {
     super.initState();
@@ -87,8 +93,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     }
   }
 
-  List<int> _committeeAges = [];
-
+  // Analogicznie jak w Twoim kodzie...
   Future<void> _loadCommitteeStats() async {
     String? code;
     if (_selectedCommittee == "Wybierz komisje") {
@@ -109,7 +114,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         _clubsButBetter = Map<String, List<String>>.from(stats['clubs']);
       });
 
-      // Wiek:
+      // Wiek
       final agesResult =
           await service.getCommitteeMemberAges(_clubsButBetter, term: _value);
       final Map<String, List<int>> mpsAgeMap =
@@ -120,29 +125,43 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         _committeeAges = allAges;
       });
 
-      // Wykształcenie (to jest kluczowe!):
+      // Wykształcenie
       final educationDetails = await service.getCommitteeMemberDetails(
         _clubsButBetter,
         term: _value,
         searchedInfo: 'edukacja',
       );
-      // educationDetails to Map<String, Map<String, int>>
-      //  gdzie kluczem zewnętrznym jest klub, a wewnętrznym - poziom wykształcenia
-
       Map<String, int> aggregatedEducation = {};
       educationDetails.forEach((club, eduMap) {
         eduMap.forEach((education, count) {
-          // Sumujemy każdy poziom wykształcenia ponad kluby
           aggregatedEducation[education] =
               (aggregatedEducation[education] ?? 0) + count;
         });
       });
-
       setState(() {
         _committeeEducation = aggregatedEducation;
       });
+
+      // Profesja (komisje)
+      final professionDetails = await service.getCommitteeMemberDetails(
+        _clubsButBetter,
+        term: _value,
+        searchedInfo: 'profesja',
+      );
+      Map<String, int> aggregatedProfession = {};
+      professionDetails.forEach((club, profMap) {
+        profMap.forEach((profession, count) {
+          aggregatedProfession[profession] =
+              (aggregatedProfession[profession] ?? 0) + count;
+        });
+      });
+      setState(() {
+        _committeeProfession = aggregatedProfession;
+        _committeeProfessionByParty =
+            Map<String, Map<String, int>>.from(professionDetails);
+      });
     } catch (e) {
-      // Obsługa błędów
+      print("Błąd podczas ładowania statystyk komisji: $e");
     }
   }
 
@@ -158,8 +177,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             _mpsList.map((mp) => "${mp.firstName} ${mp.lastName}").toList();
         if (_mpNames.isNotEmpty) {
           _selectedMp = _mpNames.first;
-          _loadMpHistory(
-              _mpsList.first, term); // Załaduj historię pierwszego posła
+          _loadMpHistory(_mpsList.first, term); // Załaduj historię pierwszego
         }
         _isLoadingPoslowieData = false;
       });
@@ -171,46 +189,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         SnackBar(content: Text('Błąd podczas ładowania posłów: $e')),
       );
     }
-  }
-
-  Widget _buildMpVotesChart(Mp mp) {
-    return Container(
-      height: 300,
-      padding: EdgeInsets.all(16),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: mp.numberOfVotes.toDouble() + 1000,
-          barGroups: [
-            BarChartGroupData(
-              x: 0,
-              barRods: [
-                BarChartRodData(
-                  toY: mp.numberOfVotes.toDouble(),
-                  color: Colors.blue,
-                  width: 20,
-                  borderRadius: BorderRadius.circular(4),
-                )
-              ],
-            ),
-          ],
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) {
-                    return Text("Głosy", style: TextStyle(fontSize: 12));
-                  }),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
-            ),
-          ),
-          gridData: FlGridData(show: true),
-          borderData: FlBorderData(show: false),
-        ),
-      ),
-    );
   }
 
   Future<void> _loadMpHistory(Mp mp, int term) async {
@@ -244,10 +222,12 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     }
   }
 
+  // ------------------------ ZAKŁADKA KOMISJE ------------------------
   Widget _buildKomisjeTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ... Twój niezmieniony kod do UI (kadencja, pobieranie, dropdown) ...
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -375,11 +355,12 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     );
   }
 
+  // ------------------------ ZAKŁADKA POSŁOWIE ------------------------
   Widget _buildPoslowieTab() {
     final statsOptions = [
       "brak",
       "wiek",
-      "edukacja", // <-- to nas interesuje szczególnie
+      "edukacja",
       "profesja",
       "okręg",
       "województwo"
@@ -391,6 +372,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         children: [
           Text("Kadencja sejmu (Posłowie)", style: TextStyle(fontSize: 18)),
           SizedBox(height: 8),
+          // ... UI do zmiany numeru kadencji ...
           Row(
             children: [
               Expanded(
@@ -491,7 +473,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             if (_historyOfMp.isNotEmpty) _buildMpHistoryTable(_historyOfMp),
             SizedBox(height: 16),
             _selectedMpStat != "brak"
-                ? _buildMpStatistics() // wywołanie statystyk
+                ? _buildMpStatistics()
                 : SizedBox.shrink(),
           ],
         ],
@@ -499,18 +481,36 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     );
   }
 
+  // Tabela z historią danego posła
+  Widget _buildMpHistoryTable(List<Map<String, dynamic>> data) {
+    if (data.isEmpty) return SizedBox.shrink();
+    final columns = data.first.keys.toList();
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
+        rows: data.map((row) {
+          return DataRow(
+            cells: columns.map((c) {
+              return DataCell(Text(row[c].toString()));
+            }).toList(),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ------------------------ STATYSTYKI POSŁÓW ------------------------
   Widget _buildMpStatistics() {
-    // Poniżej dodajemy kolejne statystyki w zależności od wybranej opcji
     if (_selectedMpStat == "wiek") {
-      List<int> ages = _mpsList.where((mp) => mp.birthDate != null).map((mp) {
-        DateTime birthDate = DateTime.parse(mp.birthDate!);
+      final ages = _mpsList.where((mp) => mp.birthDate != null).map((mp) {
+        final birthDate = DateTime.parse(mp.birthDate!);
         return DateTime.now().year - birthDate.year;
       }).toList();
 
       if (ages.isEmpty) {
         return Center(child: Text("Brak danych o wieku posłów."));
       }
-
       final stats = calculateAgeStats(ages);
 
       return Column(
@@ -552,20 +552,16 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           ),
         ],
       );
-
-      // NOWE: sekcja „edukacja” w zakładce „Posłowie”
     } else if (_selectedMpStat == "edukacja") {
-      // Nowa funkcja: grupowanie edukacji według partii.
       final Map<String, Map<String, int>> partyEducationMap =
           groupEducationLevelsByParty(_mpsList);
-      partyEducationMap.remove("niez.");
+      partyEducationMap.remove("niez."); // ewentualnie
       if (partyEducationMap.isEmpty) {
         return Center(
           child: Text("Brak danych o wykształceniu posłów."),
         );
       }
 
-      // Renderujemy osobny wykres (i tabelę) dla każdej partii
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -574,7 +570,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 16),
-          // Listujemy każdą partię i jej mapę wykształcenia
           ...partyEducationMap.entries.map((entry) {
             final partyName = entry.key;
             final educationData = entry.value;
@@ -595,7 +590,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                       ),
                     ),
                     SizedBox(height: 16),
-                    // Wykres kołowy zliczający poziomy wykształcenia w danej partii
                     buildEducationPieChart(educationData),
                     SizedBox(height: 16),
                     Text(
@@ -612,120 +606,94 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           }).toList(),
         ],
       );
+    } else if (_selectedMpStat == "profesja") {
+      final Map<String, Map<String, int>> partyProfessionMap =
+          groupProfessionByParty(_mpsList);
+      if (partyProfessionMap.isEmpty) {
+        return Center(child: Text("Brak danych o profesji posłów."));
+      }
+
+      // 1) Zsumuj profesje dla całej listy posłów (łącznie)
+      Map<String, int> aggregatedProfession = {};
+      partyProfessionMap.forEach((party, profMap) {
+        profMap.forEach((prof, count) {
+          aggregatedProfession[prof] =
+              (aggregatedProfession[prof] ?? 0) + count;
+        });
+      });
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Statystyki profesji posłów – całościowo",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+          // Ogólny wykres
+          buildProfessionPieChart(aggregatedProfession),
+          SizedBox(height: 16),
+          Text(
+            "Szczegóły profesji (ogółem):",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          buildEducationDetailsTable(aggregatedProfession),
+          SizedBox(height: 24),
+
+          Text(
+            "Statystyki profesji w rozbiciu na partie:",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          ...partyProfessionMap.entries.map((entry) {
+            final partyName = entry.key;
+            final profData = entry.value;
+
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 8),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      partyName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    buildProfessionPieChart(profData),
+                    SizedBox(height: 16),
+                    Text(
+                      "Szczegóły profesji:",
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    buildEducationDetailsTable(profData),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      );
+    } else if (_selectedMpStat == "województwo") {
+      // Wyświetlamy statystyki województw
+      return _buildMpStatsWojewodztwo();
+    } else if (_selectedMpStat == "okręg") {
+      return _buildMpStatsOkreg(_mpsList);
     } else {
+      // "okręg" lub "brak"
       return SizedBox.shrink();
     }
   }
 
-  Widget _buildMpHistoryTable(List<Map<String, dynamic>> data) {
-    if (data.isEmpty) return SizedBox.shrink();
-    final columns = data.first.keys.toList();
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-        rows: data.map((row) {
-          return DataRow(
-            cells: columns.map((c) {
-              return DataCell(Text(row[c].toString()));
-            }).toList(),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Map<String, int> getClubsCount(Map<String, dynamic> clubs) {
-    final counts = <String, int>{};
-    clubs.forEach((club, members) {
-      counts[club] = (members as List).length;
-    });
-    return counts;
-  }
-
-  Widget buildBarChart(Map<String, int> data) {
-    final clubEntries = data.entries.toList();
-    final List<Color> availableColors = [
-      Colors.blue,
-      Colors.green,
-      Colors.red,
-      Colors.amber,
-      Colors.cyan,
-      Colors.teal,
-      Colors.pink,
-      Colors.orange,
-      Colors.brown,
-      Colors.purple,
-    ];
-    final Map<String, Color> dynamicColors = {};
-    for (var i = 0; i < clubEntries.length; i++) {
-      dynamicColors[clubEntries[i].key] =
-          availableColors[i % availableColors.length];
-    }
-
-    return Column(
-      children: [
-        Container(
-          height: 300,
-          padding: EdgeInsets.all(16),
-          child: BarChart(
-            BarChartData(
-              barGroups: clubEntries.asMap().entries.map((entry) {
-                final index = entry.key;
-                final partyName = entry.value.key;
-                final count = entry.value.value;
-
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: count.toDouble(),
-                      color: dynamicColors[partyName],
-                      width: 20,
-                      borderRadius: BorderRadius.circular(4),
-                    )
-                  ],
-                );
-              }).toList(),
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: false,
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              gridData: FlGridData(show: true),
-              borderData: FlBorderData(show: false),
-            ),
-          ),
-        ),
-        SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: clubEntries.map((entry) {
-            final partyName = entry.key;
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  color: dynamicColors[partyName],
-                ),
-                SizedBox(width: 4),
-                Text(partyName),
-              ],
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
+  // ------------------------ ZAKŁADKA KOMISJE (UI) ------------------------
   Widget _buildOverviewTab() {
     final clubs = Map<String, dynamic>.from(_committeeStats!['clubs']);
     final membersMap = Map<String, int>.from(_committeeStats!['members']);
@@ -742,66 +710,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
           _buildClubsDataTable(clubs),
         ],
       ),
-    );
-  }
-
-  Widget _buildClubsDataTable(Map<String, dynamic> clubs) {
-    final columns = ["Klub", "Członkowie"];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columnSpacing: 26.0,
-        dataRowMinHeight: 64.0,
-        dataRowMaxHeight: 160.0,
-        headingRowHeight: 56.0,
-        columns: columns
-            .map((c) => DataColumn(
-                label: Text(c,
-                    style:
-                        TextStyle(fontSize: 10, fontWeight: FontWeight.bold))))
-            .toList(),
-        rows: clubs.entries.map((e) {
-          final clubName = e.key;
-          final members = (e.value as List).join(", ");
-
-          return DataRow(cells: [
-            DataCell(
-              Text(
-                clubName,
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-            DataCell(
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 250),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Text(
-                    members,
-                    softWrap: true,
-                    overflow: TextOverflow.visible,
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ),
-            ),
-          ]);
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMembersDataTable(Map<String, int> membersMap) {
-    final columns = ["Poseł", "Liczba komisji"];
-    return DataTable(
-      columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-      rows: membersMap.entries.map((e) {
-        return DataRow(cells: [
-          DataCell(Text(e.key)),
-          DataCell(Text(e.value.toString())),
-        ]);
-      }).toList(),
     );
   }
 
@@ -889,7 +797,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 16),
-              buildEducationPieChart(_committeeEducation), // Wykres kołowy
+              buildEducationPieChart(_committeeEducation),
               SizedBox(height: 16),
               Text(
                 "Szczegóły wykształcenia:",
@@ -898,13 +806,776 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
               SizedBox(height: 16),
               buildEducationDetailsTable(_committeeEducation),
             ],
-          ] else if (_selectedStat == "profesja")
-            Text("Tu pokaż dane profesji (zaimplementuj według potrzeb)")
+          ] else if (_selectedStat == "profesja") ...[
+            if (_committeeProfession.isEmpty)
+              Center(
+                child: Text(
+                  "Brak danych o profesjach członków tej komisji.",
+                  style: TextStyle(fontSize: 16),
+                ),
+              )
+            else ...[
+              Text(
+                "Statystyki profesji w całej komisji",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              buildProfessionPieChart(_committeeProfession),
+              SizedBox(height: 16),
+              Text(
+                "Szczegóły profesji (ogółem):",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              buildEducationDetailsTable(_committeeProfession),
+              SizedBox(height: 24),
+              Text(
+                "Statystyki profesji w rozbiciu na partie:",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              ..._committeeProfessionByParty.entries.map((entry) {
+                final partyName = entry.key;
+                final profData = entry.value;
+
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          partyName,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        buildProfessionPieChart(profData),
+                        SizedBox(height: 16),
+                        Text(
+                          "Szczegóły profesji:",
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        buildEducationDetailsTable(profData),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
+          ],
         ],
       ),
     );
   }
 
+  // ------------------------ POMOCNICZE (WSPÓLNE) ------------------------
+  Widget buildBarChart(Map<String, int> data) {
+    final clubEntries = data.entries.toList();
+    final List<Color> availableColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.red,
+      Colors.amber,
+      Colors.cyan,
+      Colors.teal,
+      Colors.pink,
+      Colors.orange,
+      Colors.brown,
+      Colors.purple,
+    ];
+    final Map<String, Color> dynamicColors = {};
+    for (var i = 0; i < clubEntries.length; i++) {
+      dynamicColors[clubEntries[i].key] =
+          availableColors[i % availableColors.length];
+    }
+
+    return Column(
+      children: [
+        Container(
+          height: 300,
+          padding: EdgeInsets.all(16),
+          child: BarChart(
+            BarChartData(
+              barGroups: clubEntries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final partyName = entry.value.key;
+                final count = entry.value.value;
+
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: count.toDouble(),
+                      color: dynamicColors[partyName],
+                      width: 20,
+                      borderRadius: BorderRadius.circular(4),
+                    )
+                  ],
+                );
+              }).toList(),
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              gridData: FlGridData(show: true),
+              borderData: FlBorderData(show: false),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: clubEntries.map((entry) {
+              final partyName = entry.key;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    color: dynamicColors[partyName],
+                  ),
+                  SizedBox(width: 4),
+                  Text(partyName),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClubsDataTable(Map<String, dynamic> clubs) {
+    final columns = ["Klub", "Członkowie"];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 26.0,
+        dataRowMinHeight: 64.0,
+        dataRowMaxHeight: 160.0,
+        headingRowHeight: 56.0,
+        columns: columns
+            .map((c) => DataColumn(
+                label: Text(c,
+                    style:
+                        TextStyle(fontSize: 10, fontWeight: FontWeight.bold))))
+            .toList(),
+        rows: clubs.entries.map((e) {
+          final clubName = e.key;
+          final members = (e.value as List).join(", ");
+
+          return DataRow(cells: [
+            DataCell(
+              Text(
+                clubName,
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+            DataCell(
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 250),
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Text(
+                    members,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
+          ]);
+        }).toList(),
+      ),
+    );
+  }
+
+  // FUNKCJA DO WYKRESÓW "profesja" (z łączeniem <1% w „Pozostałe”)
+  Widget buildProfessionPieChart(Map<String, int> professionData) {
+    final total = professionData.values.fold(0, (sum, count) => sum + count);
+    if (total == 0) {
+      return Center(
+        child: Text(
+          "Brak danych o profesjach",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    final Map<String, int> mergedData = {};
+    professionData.forEach((profession, count) {
+      final percentage = (count / total) * 100;
+      if (percentage < 2.0) {
+        mergedData["Pozostałe"] = (mergedData["Pozostałe"] ?? 0) + count;
+      } else {
+        mergedData[profession] = count;
+      }
+    });
+
+    final List<Color> expandedColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.amber,
+      Colors.pink,
+      Colors.brown,
+      Colors.cyan,
+      Colors.deepOrange,
+      Colors.indigo,
+      Colors.lightBlue,
+      Colors.lime,
+      Colors.deepPurple,
+      Colors.yellowAccent,
+      Colors.lightGreen,
+    ];
+
+    int colorIndex = 0;
+    final sections = mergedData.entries.map((entry) {
+      final count = entry.value;
+      final double percentage = (count / total) * 100;
+      final badgeOffset = percentage < 10 ? 1.8 : 1.5;
+
+      return PieChartSectionData(
+        color: expandedColors[colorIndex++ % expandedColors.length],
+        value: percentage + 7,
+        radius: 60,
+        title: '',
+        badgeWidget: _buildLabelWidget(
+          '${percentage.toStringAsFixed(1)}%',
+          expandedColors[(colorIndex - 1) % expandedColors.length],
+        ),
+        badgePositionPercentageOffset: badgeOffset,
+      );
+    }).toList();
+
+    return Column(
+      children: [
+        Container(
+          height: 300,
+          padding: EdgeInsets.all(16),
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              sectionsSpace: 3,
+              centerSpaceRadius: 40,
+              borderData: FlBorderData(show: false),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: mergedData.entries.map((entry) {
+              final idx = mergedData.keys.toList().indexOf(entry.key);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    color: expandedColors[idx % expandedColors.length],
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '${entry.key} (${entry.value})',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Histogram wieku
+  Widget buildAgeHistogram(List<int> ages) {
+    Map<String, int> ageBins = {};
+    for (int age in ages) {
+      int binStart = (age ~/ 10) * 10;
+      String binLabel = "$binStart-${binStart + 9}";
+      ageBins[binLabel] = (ageBins[binLabel] ?? 0) + 1;
+    }
+
+    final sortedBins = ageBins.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Container(
+      height: 300,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.center,
+          barGroups: sortedBins.asMap().entries.map((entry) {
+            final index = entry.key;
+            final bin = entry.value.key;
+            final count = entry.value.value;
+            return BarChartGroupData(
+              x: index,
+              barRods: [
+                BarChartRodData(
+                  toY: count.toDouble(),
+                  color: Colors.orange,
+                  width: 20,
+                ),
+              ],
+            );
+          }).toList(),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  if (value < 0 || value >= sortedBins.length) {
+                    return SizedBox();
+                  }
+                  return Text(sortedBins[value.toInt()].key,
+                      style: TextStyle(fontSize: 10));
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          gridData: FlGridData(show: true),
+          borderData: FlBorderData(show: false),
+        ),
+      ),
+    );
+  }
+
+  // Prosty wykres kołowy do edukacji
+  Widget buildEducationPieChart(Map<String, int> educationData) {
+    final rawTotal = educationData.values.fold(0, (sum, count) => sum + count);
+    if (rawTotal == 0) {
+      return Center(
+        child: Text(
+          "Brak danych do wyświetlenia",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    int colorIndex = 0;
+    final sections = educationData.entries.map((entry) {
+      final double percentage = (entry.value / rawTotal) * 100;
+      return PieChartSectionData(
+        color: sectionColors[colorIndex++ % sectionColors.length],
+        value: percentage + 7,
+        radius: 60,
+        title: '',
+        badgeWidget: _buildLabelWidget(
+          '${percentage.toStringAsFixed(1)}%',
+          sectionColors[colorIndex - 1],
+        ),
+        badgePositionPercentageOffset: 1.4,
+      );
+    }).toList();
+
+    return Column(
+      children: [
+        Container(
+          height: 300,
+          padding: EdgeInsets.all(16),
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              sectionsSpace: 3,
+              centerSpaceRadius: 40,
+              borderData: FlBorderData(show: false),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: educationData.entries.map((entry) {
+              final int index = educationData.keys.toList().indexOf(entry.key);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    color: sectionColors[index % sectionColors.length],
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    entry.key,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Kolory do wykresu kołowego edukacji
+  final List<Color> sectionColors = [
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+  ];
+
+  // Etykieta do wykresów (PieChart)
+  Widget _buildLabelWidget(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  // Prosta tabela szczegółów (edukacja, profesja – wielokrotne użycie)
+  Widget buildEducationDetailsTable(Map<String, int> data) {
+    return DataTable(
+      columnSpacing: 16.0,
+      dataRowMinHeight: 64.0,
+      dataRowMaxHeight: 64.0,
+      headingRowHeight: 56.0,
+      columns: [
+        DataColumn(
+          label: Text(
+            'Kategoria',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Liczba osób',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+      rows: data.entries.map((entry) {
+        return DataRow(cells: [
+          DataCell(
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 200),
+              child: Text(
+                entry.key,
+                style: TextStyle(fontSize: 12),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
+            ),
+          ),
+          DataCell(
+            Text(
+              entry.value.toString(),
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ]);
+      }).toList(),
+    );
+  }
+
+  // Statystyki wieku
+  Map<String, dynamic> calculateAgeStats(List<int> ages) {
+    ages.sort();
+    final minAge = ages.first;
+    final maxAge = ages.last;
+    final avgAge = ages.reduce((a, b) => a + b) / ages.length;
+    final medianAge = ages.length % 2 == 0
+        ? (ages[ages.length ~/ 2 - 1] + ages[ages.length ~/ 2]) / 2
+        : ages[ages.length ~/ 2];
+    final stdDev = sqrt(
+      ages.map((a) => pow(a - avgAge, 2)).reduce((a, b) => a + b) / ages.length,
+    );
+
+    return {
+      'minAge': minAge,
+      'maxAge': maxAge,
+      'avgAge': avgAge.toStringAsFixed(1),
+      'medianAge': medianAge.toStringAsFixed(1),
+      'stdDev': stdDev.toStringAsFixed(1),
+    };
+  }
+
+  // Policz liczbę członków w klubach
+  Map<String, int> getClubsCount(Map<String, dynamic> clubs) {
+    final counts = <String, int>{};
+    clubs.forEach((club, members) {
+      counts[club] = (members as List).length;
+    });
+    return counts;
+  }
+
+  // Grupowanie poziomów wykształcenia
+  Map<String, Map<String, int>> groupEducationLevelsByParty(List<Mp> mps) {
+    final result = <String, Map<String, int>>{};
+    for (final mp in mps) {
+      final party = mp.club.isNotEmpty ? mp.club : "Niezrzeszeni";
+      final edu = mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
+      result.putIfAbsent(party, () => {});
+      result[party]![edu] = (result[party]![edu] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  // Grupowanie profesji posłów wg partii
+  Map<String, Map<String, int>> groupProfessionByParty(List<Mp> mps) {
+    final result = <String, Map<String, int>>{};
+    for (final mp in mps) {
+      final party = mp.club.isNotEmpty ? mp.club : "Niezrzeszeni";
+      final prof = (mp.profession != null && mp.profession!.isNotEmpty)
+          ? mp.profession!
+          : "Nieznane";
+      result.putIfAbsent(party, () => {});
+      result[party]![prof] = (result[party]![prof] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  // ------ WOJEWÓDZTWO (NOWE!) ------
+  Widget _buildMpStatsWojewodztwo() {
+    // 1) Grupujemy wszystkich posłów wg partii i wg województwa
+    final partyVoivodeshipMap = groupVoivodeshipByParty(_mpsList);
+    if (partyVoivodeshipMap.isEmpty) {
+      return Center(child: Text("Brak danych o województwie posłów."));
+    }
+
+    // 2) Tworzymy mapę zbiorczą (wszystkie partie łącznie)
+    Map<String, int> aggregatedVoivodeship = {};
+    partyVoivodeshipMap.forEach((party, voivMap) {
+      voivMap.forEach((voiv, count) {
+        aggregatedVoivodeship[voiv] =
+            (aggregatedVoivodeship[voiv] ?? 0) + count;
+      });
+    });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Statystyki województwa posłów – całościowo",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 16),
+        buildVoivodeshipPieChart(aggregatedVoivodeship),
+        SizedBox(height: 16),
+        Text(
+          "Szczegóły województw (ogółem):",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 8),
+        buildEducationDetailsTable(aggregatedVoivodeship),
+        SizedBox(height: 24),
+        Text(
+          "Statystyki województwa w rozbiciu na partie:",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 8),
+        ...partyVoivodeshipMap.entries.map((entry) {
+          final partyName = entry.key;
+          final voivData = entry.value;
+          return Card(
+            margin: EdgeInsets.symmetric(vertical: 8),
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    partyName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  buildVoivodeshipPieChart(voivData),
+                  SizedBox(height: 16),
+                  Text(
+                    "Szczegóły województw:",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  buildEducationDetailsTable(voivData),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  // FUNKCJA do grupowania posłów wg partii → województwo
+  Map<String, Map<String, int>> groupVoivodeshipByParty(List<Mp> mps) {
+    final result = <String, Map<String, int>>{};
+    for (final mp in mps) {
+      final party = mp.club.isNotEmpty ? mp.club : "Niezrzeszeni";
+      // Zakładamy, że "voivodeship" jest w polu mp.voivodeship
+      final voiv = (mp.voivodeship != null && mp.voivodeship!.isNotEmpty)
+          ? mp.voivodeship!
+          : "Nieznane";
+
+      result.putIfAbsent(party, () => {});
+      result[party]![voiv] = (result[party]![voiv] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  // WYKRES DLA WOJEWÓDZTWA
+  Widget buildVoivodeshipPieChart(Map<String, int> voivData) {
+    final total = voivData.values.fold(0, (sum, count) => sum + count);
+    if (total == 0) {
+      return Center(
+        child: Text(
+          "Brak danych o województwach",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    // 1) Łączenie <1% w "Pozostałe"
+    final Map<String, int> mergedData = {};
+    voivData.forEach((voiv, count) {
+      final percentage = (count / total) * 100;
+      if (percentage < 1.0) {
+        mergedData["Pozostałe"] = (mergedData["Pozostałe"] ?? 0) + count;
+      } else {
+        mergedData[voiv] = count;
+      }
+    });
+
+    // 2) Kolory i sekcje
+    final List<Color> expandedColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.amber,
+      Colors.pink,
+      Colors.brown,
+      Colors.cyan,
+      Colors.deepOrange,
+      Colors.indigo,
+      Colors.lightBlue,
+      Colors.lime,
+      Colors.deepPurple,
+      Colors.yellowAccent,
+      Colors.lightGreen,
+    ];
+
+    int colorIndex = 0;
+    final sections = mergedData.entries.map((entry) {
+      final count = entry.value;
+      final double percentage = (count / total) * 100;
+      final badgeOffset = percentage < 5 ? 1.5 : 1.5;
+
+      return PieChartSectionData(
+        color: expandedColors[colorIndex++ % expandedColors.length],
+        value: percentage + 7,
+        radius: 60,
+        title: '',
+        badgeWidget: _buildLabelWidget(
+          '${percentage.toStringAsFixed(1)}%',
+          expandedColors[(colorIndex - 1) % expandedColors.length],
+        ),
+        badgePositionPercentageOffset: badgeOffset,
+      );
+    }).toList();
+
+    // 3) Render
+    return Column(
+      children: [
+        Container(
+          height: 300,
+          padding: EdgeInsets.all(16),
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              sectionsSpace: 3,
+              centerSpaceRadius: 40,
+              borderData: FlBorderData(show: false),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: mergedData.entries.map((entry) {
+              final idx = mergedData.keys.toList().indexOf(entry.key);
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    color: expandedColors[idx % expandedColors.length],
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '${entry.key} (${entry.value})',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ----------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -913,9 +1584,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
         title: Padding(
           padding: const EdgeInsets.only(top: 20.0),
           child: Row(
-            mainAxisAlignment:
-                MainAxisAlignment.center, // Wyśrodkowanie w poziomie
-            mainAxisSize: MainAxisSize.min, // Minimalny rozmiar Row
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.bar_chart, size: 32),
               SizedBox(width: 8),
@@ -947,283 +1617,122 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 }
 
-// ============================= Pomocnicze funkcje =============================
-
-// Funkcja do obliczenia statystyk wieku
-Map<String, dynamic> calculateAgeStats(List<int> ages) {
-  ages.sort();
-  int minAge = ages.first;
-  int maxAge = ages.last;
-  double avgAge = ages.reduce((a, b) => a + b) / ages.length;
-  num medianAge = ages.length % 2 == 0
-      ? (ages[ages.length ~/ 2 - 1] + ages[ages.length ~/ 2]) / 2
-      : ages[ages.length ~/ 2];
-  double stdDev = sqrt(
-      ages.map((a) => pow(a - avgAge, 2)).reduce((a, b) => a + b) /
-          ages.length);
-
-  return {
-    'minAge': minAge,
-    'maxAge': maxAge,
-    'avgAge': avgAge.toStringAsFixed(1),
-    'medianAge': medianAge.toStringAsFixed(1),
-    'stdDev': stdDev.toStringAsFixed(1),
-  };
-}
-
-// Wykres słupkowy wieku
-Widget buildAgeHistogram(List<int> ages) {
-  Map<String, int> ageBins = {};
-  for (int age in ages) {
-    int binStart = (age ~/ 10) * 10;
-    String binLabel = "$binStart-${binStart + 10}";
-    ageBins[binLabel] = (ageBins[binLabel] ?? 0) + 1;
-  }
-
-  List<MapEntry<String, int>> sortedBins = ageBins.entries.toList()
-    ..sort((a, b) => a.key.compareTo(b.key));
-
-  return Container(
-    height: 300,
-    child: BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.center,
-        barGroups: sortedBins.asMap().entries.map((entry) {
-          int index = entry.key;
-          String bin = entry.value.key;
-          int count = entry.value.value;
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: count.toDouble(),
-                color: Colors.orange,
-                width: 20,
-              ),
-            ],
-          );
-        }).toList(),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                if (value < 0 || value >= sortedBins.length) return SizedBox();
-                return Text(sortedBins[value.toInt()].key,
-                    style: TextStyle(fontSize: 10));
-              },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        gridData: FlGridData(show: true),
-        borderData: FlBorderData(show: false),
-      ),
-    ),
-  );
-}
-
-// Grupowanie danych odnośnie wykształcenia dla listy posłów
-Map<String, int> groupEducationLevels(List<Mp> mps) {
-  Map<String, int> educationGroups = {};
-  for (var mp in mps) {
-    // Zakładamy, że w modelu Mp jest pole `educationLevel`
-    final educationLevel =
-        mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
-    educationGroups[educationLevel] =
-        (educationGroups[educationLevel] ?? 0) + 1;
-  }
-  return educationGroups;
-}
-
-// Zmienna o danej komisji
-Map<String, int> _committeeEducation = {};
-
-// Wykres kołowy wykształcenia (wykorzystywany zarówno w Komisji, jak i Posłach)
-// Define a fixed list of colors for each category
-final List<Color> sectionColors = [
-  Colors.blue, // Higher education
-  Colors.green, // Vocational education
-  Colors.orange, // Secondary non-vocational education
-  Colors.purple, // General secondary education
-];
-
-// Updated pie chart function with better label positioning
-// Zmienna z kolorami sekcji
-// Funkcja do tworzenia etykiety
-Widget _buildLabelWidget(String text, Color color) {
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(4),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 2,
-          offset: Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-        color: color,
-      ),
-    ),
-  );
-}
-
-// Funkcja budująca wykres kołowy z poprawkami
-Widget buildEducationPieChart(Map<String, int> educationData) {
-  final rawTotal = educationData.values.fold(0, (sum, count) => sum + count);
-  if (rawTotal == 0) {
-    return Center(
-      child: Text(
-        "Brak danych do wyświetlenia",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  int colorIndex = 0;
-
-  final sections = educationData.entries.map((entry) {
-    final double percentage = (entry.value / rawTotal) * 100;
-
-    // Dynamiczne przesunięcie w zależności od wielkości sekcji
-    final double sectionValue =
-        percentage < 5 ? entry.value.toDouble() + 4 : entry.value.toDouble();
-
-    final double dynamicOffset = sectionValue > rawTotal * 0.1
-        ? 1.4 // Standardowe przesunięcie dla większych sekcji
-        : 1.4; // Większe przesunięcie dla mniejszych sekcji
-
-    return PieChartSectionData(
-      color: sectionColors[colorIndex++ % sectionColors.length],
-      value: sectionValue,
-      radius: 60, // Rozmiar sekcji
-      title: '',
-      badgeWidget: _buildLabelWidget(
-        '${percentage.toStringAsFixed(1)}%',
-        sectionColors[colorIndex - 1],
-      ),
-      badgePositionPercentageOffset: dynamicOffset,
-    );
-  }).toList();
-
-  return Column(
-    children: [
-      Container(
-        height: 300,
-        padding: EdgeInsets.all(16),
-        child: PieChart(
-          PieChartData(
-            sections: sections,
-            sectionsSpace: 3, // Odstępy między sekcjami
-            centerSpaceRadius: 40, // Środkowa przestrzeń
-            borderData: FlBorderData(show: false),
-          ),
-        ),
-      ),
-      SizedBox(height: 16),
-      Wrap(
-        spacing: 16,
-        runSpacing: 8,
-        children: educationData.entries.map((entry) {
-          final int index = educationData.keys.toList().indexOf(entry.key);
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 16,
-                height: 16,
-                color: sectionColors[index % sectionColors.length],
-              ),
-              SizedBox(width: 8),
-              Text(
-                entry.key,
-                style: TextStyle(fontSize: 14),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    ],
-  );
-}
-
-Widget buildEducationDetailsTable(Map<String, int> educationData) {
-  return DataTable(
-    columnSpacing: 16.0, // Odstęp między kolumnami
-    dataRowMinHeight: 64.0,
-    dataRowMaxHeight: 64.0,
-    headingRowHeight: 56.0,
-    columns: [
-      DataColumn(
-        label: Text(
-          'Poziom wykształcenia',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
-      DataColumn(
-        label: Text(
-          'Liczba osób',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
-    ],
-    rows: educationData.entries.map((entry) {
-      return DataRow(cells: [
-        DataCell(
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 200, // Maksymalna szerokość kolumny
-            ),
-            child: Text(
-              entry.key,
-              style: TextStyle(fontSize: 12),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-        ),
-        DataCell(
-          Text(
-            entry.value.toString(),
-            style: TextStyle(fontSize: 12),
-          ),
-        ),
-      ]);
-    }).toList(),
-  );
-}
-
-/// Grupuje posłów według klubu (partii) i poziomu wykształcenia.
-/// Zwraca mapę: { "PiS": {"wyższe": 10, "średnie": 5, ...}, "PO": {...}, ... }
-Map<String, Map<String, int>> groupEducationLevelsByParty(List<Mp> mps) {
-  Map<String, Map<String, int>> result = {};
-
-  for (var mp in mps) {
-    // Wydobywamy nazwę partii/klubu:
+Map<String, Map<String, int>> groupDistrictByParty(List<Mp> mps) {
+  // Kluczem w zewnętrznej mapie będzie nazwa okręgu,
+  // w wewnętrznej – nazwa partii (club).
+  final result = <String, Map<String, int>>{};
+  for (final mp in mps) {
+    final district = mp.districtName.isNotEmpty ? mp.districtName : "Nieznane";
     final party = mp.club.isNotEmpty ? mp.club : "Niezrzeszeni";
 
-    // Poziom wykształcenia:
-    final educationLevel =
-        mp.educationLevel.isNotEmpty ? mp.educationLevel : "Nieznane";
+    // Gdy w danym okręgu nie ma jeszcze wpisu, twórzmy mapę
+    result.putIfAbsent(district, () => {});
+    // Zwiększamy licznik posłów danej partii w tym okręgu
+    result[district]![party] = (result[district]![party] ?? 0) + 1;
+  }
+  return result;
+}
 
-    // Inicjalizacja wpisu w mapie, jeśli nie istnieje:
-    if (!result.containsKey(party)) {
-      result[party] = {};
-    }
+Widget _buildMpStatsOkreg(List<Mp> mpsList) {
+  // 1) Grupujemy posłów wg okręgu → partia
+  final districtData = groupDistrictByParty(mpsList);
 
-    // Zwiększamy licznik dla danej partii i poziomu wykształcenia
-    result[party]![educationLevel] = (result[party]![educationLevel] ?? 0) + 1;
+  if (districtData.isEmpty) {
+    return Center(child: Text("Brak danych o okręgach wyborczych."));
   }
 
-  return result;
+  // 2) Zbierz wszystkie unikatowe partie
+  final allParties =
+      districtData.values.expand((map) => map.keys).toSet().toList()..sort();
+
+  // 3) Posortuj listę okręgów (klucze)
+  final sortedDistricts = districtData.keys.toList()..sort();
+
+  // 4) Budujemy tabelę z przewijaniem pionowym
+  return Scrollbar(
+    thumbVisibility: true,
+    child: SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: [
+            // Pierwsza kolumna: nazwa okręgu
+            DataColumn(
+              label: Text(
+                "Okręg",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            // Kolumny dla każdej partii
+            ...allParties.map(
+              (party) => DataColumn(
+                label: Text(
+                  party,
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+          rows: sortedDistricts.map((district) {
+            final partiesCountMap = districtData[district]!;
+            final rowCells = <DataCell>[];
+
+            // 1) nazwa okręgu
+            rowCells.add(DataCell(Text(district)));
+
+            // 2) liczba posłów w każdej partii (lub 0, jeśli brak)
+            for (final party in allParties) {
+              final count = partiesCountMap[party] ?? 0;
+              rowCells.add(DataCell(Text(count.toString())));
+            }
+
+            return DataRow(cells: rowCells);
+          }).toList(),
+        ),
+      ),
+    ),
+  );
+}
+
+// Pomocniczy widget generujący wiersz "Razem" (podsumowanie kolumn)
+DataRow _buildOkregSumRow(
+  Map<String, Map<String, int>> districtData,
+  List<String> allParties,
+) {
+  int grandTotal = 0; // łączna liczba posłów w każdym okręgu
+
+  // Zliczamy sumy kolumn (dla każdej partii osobno):
+  final columnSums = <String, int>{};
+  for (final district in districtData.keys) {
+    final partiesMap = districtData[district]!;
+    for (final party in allParties) {
+      columnSums[party] = (columnSums[party] ?? 0) + (partiesMap[party] ?? 0);
+    }
+  }
+
+  // Wyliczamy sumę łączną (wszystkie kolumny)
+  grandTotal = columnSums.values.fold(0, (prev, el) => prev + el);
+
+  // Budujemy listę DataCell:
+  final sumCells = <DataCell>[];
+  sumCells.add(
+      DataCell(Text("Razem", style: TextStyle(fontWeight: FontWeight.bold))));
+
+  // Dla każdej partii wstawiamy sumę z columnSums
+  for (final party in allParties) {
+    final sumValue = columnSums[party] ?? 0;
+    sumCells.add(DataCell(Text(
+      sumValue.toString(),
+      style: TextStyle(fontWeight: FontWeight.bold),
+    )));
+  }
+
+  // Ostatnia kolumna – łączna suma
+  sumCells.add(DataCell(Text(
+    grandTotal.toString(),
+    style: TextStyle(fontWeight: FontWeight.bold),
+  )));
+
+  return DataRow(cells: sumCells);
 }

@@ -176,24 +176,28 @@ class CommitteeService {
         final filteredMPs =
             MPs.where((mp) => mp['lastFirstName'] == person).toList();
         if (filteredMPs.isNotEmpty) {
-          String educationOfMP = "";
+          String infoOfMP = "";
           if (searchedInfo == 'edukacja') {
             // educationLevel
-            educationOfMP =
-                filteredMPs.map((mp) => mp['educationLevel']).join(", ");
+            infoOfMP = filteredMPs.map((mp) => mp['educationLevel']).join(", ");
           } else if (searchedInfo == 'okręg') {
             // districtName
-            educationOfMP =
-                filteredMPs.map((mp) => mp['districtName']).join(", ");
+            infoOfMP = filteredMPs.map((mp) => mp['districtName']).join(", ");
           } else if (searchedInfo == 'profesja') {
             // profession
-            educationOfMP = filteredMPs
+            infoOfMP = filteredMPs
                 .where((mp) => mp.containsKey('profession'))
                 .map((mp) => mp['profession'])
                 .join(", ");
           }
 
-          educations[educationOfMP] = (educations[educationOfMP] ?? 0) + 1;
+          // Może się zdarzyć, że infoOfMP jest pusty (np. brak w JSON)
+          // dlatego warto dać domyślną wartość:
+          if (infoOfMP.isEmpty) {
+            infoOfMP = "Nieznane";
+          }
+
+          educations[infoOfMP] = (educations[infoOfMP] ?? 0) + 1;
         }
       }
       MPsEducation[party] = educations;
@@ -238,11 +242,13 @@ class CommitteeService {
             MPs.where((mp) => mp['lastFirstName'] == person).toList();
         if (filteredMPs.isNotEmpty) {
           final mp = filteredMPs.first;
-          final dateOfBirthStr = mp[searchedInfo] as String;
-          final dateOfBirth = DateTime.parse(dateOfBirthStr);
-          final ageInDays = currentTime.difference(dateOfBirth).inDays;
-          final ageInYears = (ageInDays / 365).floor();
-          ages.add(ageInYears);
+          final dateOfBirthStr = mp[searchedInfo] as String?;
+          if (dateOfBirthStr != null) {
+            final dateOfBirth = DateTime.parse(dateOfBirthStr);
+            final ageInDays = currentTime.difference(dateOfBirth).inDays;
+            final ageInYears = (ageInDays / 365).floor();
+            ages.add(ageInYears);
+          }
         }
       }
       MPsAge[party] = ages;
