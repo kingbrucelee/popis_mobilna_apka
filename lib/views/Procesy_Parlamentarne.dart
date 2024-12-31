@@ -344,7 +344,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildInterpelationTab(), // Zakładka Interpelacje
+          _buildInterpelationTab(),
           _buildLawsTab(),
           _buildCommitteesTab(),
           _buildVotingTab(),
@@ -599,12 +599,12 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     : ListView(
                         shrinkWrap:
                             true, // Prevent ListView from growing indefinitely
-                        physics: NeverScrollableScrollPhysics(),
+                        //physics: NeverScrollableScrollPhysics(),
                         children: _latestLaws.map((law) {
-                          return ListTile(
+                          return law['type']=='Rozporządzenie' ? ListTile(
                             title: Text(law['title']),
                             subtitle: Text('Typ: ${law['type']}'),
-                          );
+                          ):Container();
                         }).toList(),
                       ),
           ],
@@ -624,8 +624,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         Text('Tytuł: ${_processDetails!['title'] ?? 'Brak tytułu'}'),
         Text('Opis: ${_processDetails!['description'] ?? 'Brak opisu'}'),
-        Text(
-            'Data rozpoczęcia: ${_processDetails!['processStartDate'] ?? 'Brak daty'}'),
         SizedBox(height: 16),
         Text('Etapy procesu:', style: TextStyle(fontWeight: FontWeight.bold)),
         ...(_processDetails!['stages'] ?? []).map((stage) {
@@ -633,8 +631,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Etap: ${stage['stageName']}'),
-              Text('Data: ${stage['dates'] ?? 'Brak daty'}'),
-              Text('Decyzja: ${stage['decision'] ?? 'Brak decyzji'}'),
+              if (stage['decision'] != null && stage['decision'].isNotEmpty)
+                Text('Decyzja: ${stage['decision']}'),
               Divider(),
             ],
           );

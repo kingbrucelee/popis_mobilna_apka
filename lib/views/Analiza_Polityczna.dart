@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 // Zakładam, że plik seatsCalculator.dart jest katalog wyżej, a ten z kolei w folderze controllers.
 // Dopasuj ścieżkę importu do faktycznej struktury projektu:
-import '../controllers/seatsCalculator.dart';
+//import '../controllers/seatsCalculator.dart';
 
 class View3 extends StatefulWidget {
   @override

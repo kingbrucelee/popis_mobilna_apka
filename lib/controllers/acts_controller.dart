@@ -25,7 +25,8 @@ class LegislativeController {
   Future<List<Map<String, dynamic>>> fetchLatestLaws(int year) async {
     final response = await http.get(Uri.parse('$baseUrl/eli/acts/DU/$year'));
     if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes))['items'] ?? []);
+      print(List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes))['items'] ?? []));
+          return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes))['items'] ?? []);
     } else {
       throw Exception('Failed to load laws');
     }
