@@ -1,8 +1,6 @@
-// views/Analiza_Polityczna.dart
 import 'package:flutter/material.dart';
-// Zakładam, że plik seatsCalculator.dart jest katalog wyżej, a ten z kolei w folderze controllers.
-// Dopasuj ścieżkę importu do faktycznej struktury projektu:
-//import '../controllers/seatsCalculator.dart';
+// Upewnij się, że import jest zgodny z Twoją strukturą katalogów:
+import '../controllers/seatsCalculator.dart';
 
 class View3 extends StatefulWidget {
   @override
@@ -12,7 +10,7 @@ class View3 extends StatefulWidget {
 class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Przykładowe dane
+  // Przykładowe dane okręgów
   Map<String, dynamic> dataJson = {
     "Legnica": {
       "PiS": 0,
@@ -36,6 +34,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
     },
   };
 
+  // Głosy w procentach bądź w ilości (w zależności od trybu)
   Map<String, dynamic> votesJson = {
     "Legnica": {
       "PiS": 0.0,
@@ -90,17 +89,29 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
           indicatorColor: Colors.red,
           tabs: [
             Tab(
-                child: Text('Potencjalne Koalicje',
-                    style: TextStyle(color: Colors.red, fontSize: 12))),
+              child: Text(
+                'Potencjalne Koalicje',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
             Tab(
-                child: Text('Kalkulator Wyborczy',
-                    style: TextStyle(color: Colors.red, fontSize: 12))),
+              child: Text(
+                'Kalkulator Wyborczy',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
             Tab(
-                child: Text('Korelacje Wyborcze',
-                    style: TextStyle(color: Colors.red, fontSize: 12))),
+              child: Text(
+                'Korelacje Wyborcze',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
             Tab(
-                child: Text('Prawo Benforda',
-                    style: TextStyle(color: Colors.red, fontSize: 12))),
+              child: Text(
+                'Prawo Benforda',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
           ],
         ),
       ),
@@ -156,23 +167,28 @@ class ElectionCalculatorTab extends StatefulWidget {
 }
 
 class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
-  String _type = "ilościowy";
+  String _type = "ilościowy"; // np. "ilościowy" albo "procentowy"
   String _method = "d'Hondta";
-  String _selectedDistrict = "";
+  late String _selectedDistrict;
+
+  // Tymczasowe pola do UI, uzupełniane w _loadDistrictValues:
   double _pis = 0.0,
       _ko = 0.0,
       _td = 0.0,
       _lewica = 0.0,
       _konf = 0.0,
       _frequency = 0.0;
+  int _seatsNum = 0;
+
+  // Przechowujemy wynik kalkulacji
+  Map<String, int> _resultSeats = {};
 
   @override
   void initState() {
     super.initState();
-    if (widget.dataJson.isNotEmpty) {
-      _selectedDistrict = widget.dataJson.keys.first;
-      _loadDistrictValues(_selectedDistrict);
-    }
+    // Domyślnie wybieramy pierwszy okręg z mapy:
+    _selectedDistrict = widget.dataJson.keys.first;
+    _loadDistrictValues(_selectedDistrict);
   }
 
   @override
@@ -180,28 +196,188 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ...
-          // Tu wstaw swój UI do wprowadzania głosów, frekwencji, metody, itp.
-          // np. dropdown do wyboru okręgu, inputy do PiS/KO/TD/Lewica/Konf...
-          // Przyciski, które wywołają SeatsCalculatorSingleDistrict.chooseMethods(...)
-          // i wyświetlą wynik.
+          // Dropdown z wyborem okręgu
+          Text('Wybierz okręg:', style: TextStyle(fontWeight: FontWeight.bold)),
+          DropdownButton<String>(
+            value: _selectedDistrict,
+            items: widget.dataJson.keys.map<DropdownMenuItem<String>>((dist) {
+              return DropdownMenuItem<String>(
+                value: dist,
+                child: Text(dist),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedDistrict = value;
+                  _loadDistrictValues(value);
+                });
+              }
+            },
+          ),
+          Divider(),
+
+          // Pola do wprowadzania liczby głosów:
+          _buildNumberField('PiS', _pis, (val) {
+            setState(() => _pis = val);
+          }),
+          _buildNumberField('KO', _ko, (val) {
+            setState(() => _ko = val);
+          }),
+          _buildNumberField('Trzecia Droga', _td, (val) {
+            setState(() => _td = val);
+          }),
+          _buildNumberField('Lewica', _lewica, (val) {
+            setState(() => _lewica = val);
+          }),
+          _buildNumberField('Konfederacja', _konf, (val) {
+            setState(() => _konf = val);
+          }),
+
+          // Frekwencja
+          _buildNumberField('Frekwencja (np. 100000 głosów)', _frequency,
+              (val) {
+            setState(() => _frequency = val);
+          }),
+
+          // Liczba miejsc
+          _buildSeatsField(),
+
+          SizedBox(height: 16),
+
+          // Metoda podziału:
+          Text('Wybierz metodę:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          DropdownButton<String>(
+            value: _method,
+            items: [
+              "d'Hondta",
+              "Sainte-Laguë",
+              "Kwota Hare’a (metoda największych reszt)",
+              "Kwota Hare’a (metoda najmniejszych reszt)",
+            ].map((m) {
+              return DropdownMenuItem<String>(
+                value: m,
+                child: Text(m),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _method = val;
+                });
+              }
+            },
+          ),
+
+          SizedBox(height: 16),
+
+          // Przycisk obliczania
+          ElevatedButton(
+            onPressed: _calculateSeats,
+            child: Text('Oblicz podział mandatów'),
+          ),
+
+          SizedBox(height: 16),
+
+          // Wyświetlanie wyniku
+          Text(
+            'Wynik podziału mandatów:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (_resultSeats.isNotEmpty)
+            ..._resultSeats.entries.map((e) => Text('${e.key}: ${e.value}')),
+
+          SizedBox(height: 100),
         ],
       ),
     );
   }
 
+  /// Ładuje wartości z widget.dataJson i widget.votesJson do pól tymczasowych
   void _loadDistrictValues(String district) {
+    final distData = widget.dataJson[district];
     final distVotes = widget.votesJson[district];
-    if (distVotes != null) {
+    if (distData != null && distVotes != null) {
       setState(() {
         _pis = distVotes["PiS"]?.toDouble() ?? 0.0;
         _ko = distVotes["KO"]?.toDouble() ?? 0.0;
         _td = distVotes["Trzecia Droga"]?.toDouble() ?? 0.0;
         _lewica = distVotes["Lewica"]?.toDouble() ?? 0.0;
         _konf = distVotes["Konfederacja"]?.toDouble() ?? 0.0;
-        _frequency = widget.dataJson[district]["Frekwencja"]?.toDouble() ?? 0.0;
+        _frequency = distData["Frekwencja"]?.toDouble() ?? 0.0;
+        _seatsNum = distData["Miejsca do zdobycia"] ?? 0;
       });
     }
+  }
+
+  /// Zapisuje wprowadzone wartości z pól do widget.dataJson i widget.votesJson,
+  /// a następnie wywołuje SeatsCalculatorSingleDistrict
+  void _calculateSeats() {
+    // Zaktualizuj głosy i frekwencję
+    widget.votesJson[_selectedDistrict]["PiS"] = _pis;
+    widget.votesJson[_selectedDistrict]["KO"] = _ko;
+    widget.votesJson[_selectedDistrict]["Trzecia Droga"] = _td;
+    widget.votesJson[_selectedDistrict]["Lewica"] = _lewica;
+    widget.votesJson[_selectedDistrict]["Konfederacja"] = _konf;
+
+    widget.dataJson[_selectedDistrict]["Frekwencja"] = _frequency;
+    widget.dataJson[_selectedDistrict]["Miejsca do zdobycia"] = _seatsNum;
+
+    // Wywołaj callbacki, aby przekazać zmiany wyżej (np. do View3)
+    widget.onVotesJsonChanged(widget.votesJson);
+    widget.onDataJsonChanged(widget.dataJson);
+
+    // Oblicz mandaty
+    final result = SeatsCalculatorSingleDistrict.chooseMethods(
+      PiS: _pis,
+      KO: _ko,
+      TD: _td,
+      Lewica: _lewica,
+      Konf: _konf,
+      Freq: _frequency,
+      method: _method,
+      seatsNum: _seatsNum,
+    );
+
+    setState(() {
+      _resultSeats = {};
+      if (result.containsKey("recivedVotes")) {
+        // Wyświetlamy co zwrócił kalkulator
+        _resultSeats = Map<String, int>.from(result["recivedVotes"]);
+      }
+    });
+  }
+
+  Widget _buildNumberField(
+    String label,
+    double initialValue,
+    ValueChanged<double> onChanged,
+  ) {
+    return TextField(
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: label),
+      controller: TextEditingController(text: initialValue.toString()),
+      onChanged: (val) {
+        final parsed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+        onChanged(parsed);
+      },
+    );
+  }
+
+  Widget _buildSeatsField() {
+    return TextField(
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: 'Liczba mandatów w okręgu'),
+      controller: TextEditingController(text: _seatsNum.toString()),
+      onChanged: (val) {
+        final parsed = int.tryParse(val) ?? 0;
+        setState(() {
+          _seatsNum = parsed;
+        });
+      },
+    );
   }
 }
