@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:html/parser.dart';
 
 class InterpelationDetails {
   final String title;
@@ -105,6 +107,14 @@ class InterpelationController {
           htmls.add(null);
         }
       }
+      var textContent = '';
+      try{
+        final response = await http.get(Uri.parse(htmls[0]!));
+        final document = parse(response.body);
+        textContent = document.body!.text;
+      } catch (e) {
+        print(e);
+      }
 
       //return [fileUrls, htmls];
 
@@ -113,7 +123,7 @@ class InterpelationController {
         'sentDate': json['sentDate'],
         //'authors': json['from'].map<String>((author) => author['name']).toList(),
         'response': json['replies'].isNotEmpty
-            ? 'Odpowiedź w załączniku:\n${fileUrls.where((url) => url != null).join(', ')}\nHTMLs:\n${htmls.where((html) => html != null).join(', ')}'
+            ? 'Odpowiedź w załączniku:\n${fileUrls.where((url) => url != null).join(', ')}\nHTMLs:\n${textContent}'
             : 'Brak odpowiedzi',
       };
     } else {
