@@ -9,7 +9,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IAPP',
+      title: 'Internetowa Analiza Polskiej Polityki',
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -29,16 +29,15 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80.0), // Zwiększenie wysokości AppBar
+        preferredSize: Size.fromHeight(100.0),
         child: AppBar(
           title: Padding(
-            padding:
-                const EdgeInsets.only(top: 20.0), // Przesunięcie tytułu w dół
+            padding: const EdgeInsets.only(top: 20.0),
             child: Text(
               'Internetowa Analiza Polskiej Polityki',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 22,
               ),
             ),
           ),
@@ -50,22 +49,50 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              SizedBox(height: 40), // Top spacing
-              CustomElevatedButton(
+              SizedBox(height: 20),
+              // Image with square frame
+              Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.deepPurple,
+                    width: 4,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(4, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'images/sejm.jpg', // Upewnij się, że plik istnieje
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              SizedBox(height: 40),
+              // Buttons below the image
+              CustomHoverableButton(
                 text: 'Statystyki',
                 onPressed: () => Navigator.pushNamed(context, '/view1'),
               ),
               SizedBox(height: 20),
-              CustomElevatedButton(
+              CustomHoverableButton(
                 text: 'Procesy Parlamentarne',
                 onPressed: () => Navigator.pushNamed(context, '/view2'),
               ),
               SizedBox(height: 20),
-              CustomElevatedButton(
+              CustomHoverableButton(
                 text: 'Analiza Polityczna',
                 onPressed: () => Navigator.pushNamed(context, '/view3'),
               ),
-              SizedBox(height: 40), // Bottom spacing
+              SizedBox(height: 40),
             ],
           ),
         ),
@@ -74,32 +101,48 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Custom Button Widget for Consistency
-class CustomElevatedButton extends StatelessWidget {
+// Custom Button Widget with Hover Effect
+class CustomHoverableButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const CustomElevatedButton({
+  const CustomHoverableButton({
     required this.text,
     required this.onPressed,
   });
 
   @override
+  _CustomHoverableButtonState createState() => _CustomHoverableButtonState();
+}
+
+class _CustomHoverableButtonState extends State<CustomHoverableButton> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurple, // Button color
-        foregroundColor: Colors.white, // Text color
-        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              _isHovered ? Colors.deepPurple[400] : Colors.deepPurple,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: _isHovered ? 10 : 5,
         ),
-        elevation: 5,
-      ),
-      onPressed: onPressed,
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        onPressed: widget.onPressed,
+        child: Text(
+          widget.text,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: _isHovered ? Colors.white54 : Colors.white,
+          ),
+        ),
       ),
     );
   }
