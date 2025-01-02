@@ -665,122 +665,125 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   Widget _buildVotingTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTerm = int.tryParse(value) ?? 10;
-                    });
-                  },
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
+                  ),
                 ),
-              ),
-              SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: fetchMps,
-                child: Text('Pobierz posłów'),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _mps.isEmpty
-                  ? Text('Brak posłów do wyświetlenia.')
-                  : Column(
-                      children: [
-                        DropdownButton<Map<String, dynamic>>(
-                          isExpanded: true,
-                          value: _selectedMp,
-                          hint: Text('Wybierz posła'),
-                          items: _mps
-                              .map((mp) =>
-                                  DropdownMenuItem<Map<String, dynamic>>(
-                                    value: mp,
-                                    child: Text(mp['lastFirstName']),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedMp = value;
-                            });
-                          },
-                        ),
-                        SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: fetchProceedingNumbers,
-                          child: Text('Pobierz numery posiedzeń'),
-                        ),
-                      ],
-                    ),
-          SizedBox(height: 16),
-          _proceedingNumbers.isEmpty
-              ? Text('Brak numerów posiedzeń do wyświetlenia.')
-              : Column(
-                  children: [
-                    DropdownButton<int>(
-                      isExpanded: true,
-                      value: _selectedProceedingNumber,
-                      hint: Text('Wybierz numer posiedzenia'),
-                      items: _proceedingNumbers
-                          .map((number) => DropdownMenuItem<int>(
-                                value: number,
-                                child: Text(number.toString()),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedProceedingNumber = value;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: fetchVotingDates,
-                      child: Text('Pobierz daty głosowań'),
-                    ),
-                  ],
+                SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: fetchMps,
+                  child: Text('Pobierz posłów'),
                 ),
-          SizedBox(height: 16),
-          _votingDates.isEmpty
-              ? Text('Brak dat głosowań do wyświetlenia.')
-              : Column(
-                  children: [
-                    DropdownButton<String>(
-                      isExpanded: true,
-                      value: _selectedVotingDate,
-                      hint: Text('Wybierz datę głosowania'),
-                      items: _votingDates
-                          .map((date) => DropdownMenuItem<String>(
-                                value: date,
-                                child: Text(date),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedVotingDate = value;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: fetchVotingDetails,
-                      child: Text('Pokaż głosowania'),
-                    ),
-                  ],
-                ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _votingDetails.isEmpty
-                  ? Text('Brak szczegółów głosowań do wyświetlenia.')
-                  : _buildVotingDetails(),
-        ],
+              ],
+            ),
+            SizedBox(height: 16),
+            _isLoading
+                ? CircularProgressIndicator()
+                : _mps.isEmpty
+                    ? Text('Brak posłów do wyświetlenia.')
+                    : Column(
+                        children: [
+                          DropdownButton<Map<String, dynamic>>(
+                            isExpanded: true,
+                            value: _selectedMp,
+                            hint: Text('Wybierz posła'),
+                            items: _mps
+                                .map((mp) =>
+                                    DropdownMenuItem<Map<String, dynamic>>(
+                                      value: mp,
+                                      child: Text(mp['lastFirstName']),
+                                    ))
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedMp = value;
+                              });
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: fetchProceedingNumbers,
+                            child: Text('Pobierz numery posiedzeń'),
+                          ),
+                        ],
+                      ),
+            SizedBox(height: 16),
+            _proceedingNumbers.isEmpty
+                ? Text('Brak numerów posiedzeń do wyświetlenia.')
+                : Column(
+                    children: [
+                      DropdownButton<int>(
+                        isExpanded: true,
+                        value: _selectedProceedingNumber,
+                        hint: Text('Wybierz numer posiedzenia'),
+                        items: _proceedingNumbers
+                            .map((number) => DropdownMenuItem<int>(
+                                  value: number,
+                                  child: Text(number.toString()),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedProceedingNumber = value;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: fetchVotingDates,
+                        child: Text('Pobierz daty głosowań'),
+                      ),
+                    ],
+                  ),
+            SizedBox(height: 16),
+            _votingDates.isEmpty
+                ? Text('Brak dat głosowań do wyświetlenia.')
+                : Column(
+                    children: [
+                      DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedVotingDate,
+                        hint: Text('Wybierz datę głosowania'),
+                        items: _votingDates
+                            .map((date) => DropdownMenuItem<String>(
+                                  value: date,
+                                  child: Text(date),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedVotingDate = value;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: fetchVotingDetails,
+                        child: Text('Pokaż głosowania'),
+                      ),
+                    ],
+                  ),
+            SizedBox(height: 16),
+            _isLoading
+                ? CircularProgressIndicator()
+                : _votingDetails.isEmpty
+                    ? Text('Brak szczegółów głosowań do wyświetlenia.')
+                    : _buildVotingDetails(),
+          ],
+        ),
       ),
     );
   }
