@@ -83,13 +83,48 @@ class CommitteeController {
   }
 
   /// Fetches presidium of a specific committee
-  Future<List<Map<String, dynamic>>> getCommitteePresidium(int term, String committeeCode) async {
-    final response = await http.get(Uri.parse('$baseUrl/term$term/committees/$committeeCode/presidium'));
+  Future<List<Map<String, dynamic>>> getCommitteePresidium(int term, String? code) async {
+    final String url = code == null || code == "łącznie"
+        ? 'https://api.sejm.gov.pl/sejm/term$term/committees'
+        : 'https://api.sejm.gov.pl/sejm/term$term/committees/$code';
 
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(jsonDecode(utf8.decode(response.bodyBytes)));
-    } else {
-      throw Exception('Failed to fetch committee presidium');
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load committee data');
     }
+
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    final uniqueMembers = <String>{};
+    final clubs = <String, List<String>>{};
+    final peoples = <String, int>{};
+
+    if (code == null || code == "łącznie") {
+      for (final committee in data) {
+        for (final member in committee['members']) {
+          if (member['club'] != null) {
+            clubs.putIfAbsent(member['club'], () => []);
+            if (!clubs[member['club']]!.contains(member['lastFirstName'])) {
+              clubs[member['club']]!.add(member['lastFirstName']);
+            }
+          }
+          peoples[member['lastFirstName']] = (peoples[member['lastFirstName']] ?? 0) + 1;
+        }
+      }
+    } else {
+      for (final member in data['members']) {
+        if (member['club'] != null) {
+          clubs.putIfAbsent(member['club'], () => []);
+          clubs[member['club']]!.add(member['lastFirstName']);
+        }
+        peoples[member['lastFirstName']] = (peoples[member['lastFirstName']] ?? 0) + 1;
+      }
+    }
+
+    return [
+      {
+        'clubs': clubs,
+        'members': peoples,
+      }
+    ];
   }
 }

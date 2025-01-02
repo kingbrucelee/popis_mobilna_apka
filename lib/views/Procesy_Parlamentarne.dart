@@ -198,6 +198,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     } catch (e) {
       print('Błąd podczas ładowania prezydium komisji: $e');
     } finally {
+      print(_committeePresidium);
       setState(() {
         _isLoading = false;
       });
@@ -510,10 +511,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   DataColumn(label: Text('Stanowisko')),
                 ],
                 rows: _committeePresidium
-                    .map((member) => DataRow(cells: [
-                          DataCell(Text(member['name'])),
-                          DataCell(Text(member['position'])),
-                        ]))
+                    .expand((item) {
+                  // Rozbijamy dane `members` i przypisujemy je do odpowiednich klubów
+                  final members = item['members'] as Map<String, int>;
+                  final clubs = item['clubs'] as Map<String, List<String>>;
+
+                  return members.entries.map((member) {
+                    // Znajdujemy klub, do którego należy członek
+                    final club = clubs.entries
+                        .firstWhere(
+                          (clubEntry) => clubEntry.value.contains(member.key),
+                      orElse: () => MapEntry('Nieznany klub', []),
+                    )
+                        .key;
+
+                    return DataRow(cells: [
+                      DataCell(Text(member.key)), // Imię i nazwisko
+                      DataCell(Text(club)), // Klub
+                    ]);
+                  });
+                })
                     .toList(),
               ),
       ],
