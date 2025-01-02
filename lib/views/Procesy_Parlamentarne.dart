@@ -498,9 +498,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         Text('Nazwa: ${_committeeDetails!['name']}'),
         Text('Zakres działania: ${_committeeDetails!['scope']}'),
         SizedBox(height: 8),
-        Text('Ostatnie posiedzenia:',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ..._recentMeetings.map((meeting) => Text(meeting)).toList(),
         Text('Prezydium Komisji:',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         _committeePresidium.isEmpty
