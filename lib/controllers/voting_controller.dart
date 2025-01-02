@@ -34,13 +34,16 @@ class VotingController {
       List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
       Set<String> votingDates = {};
       for (var voting in data) {
-        votingDates.add(voting['date']);
+        // Konwersja daty na format YYYY-MM-DD
+        String formattedDate = DateTime.parse(voting['date']).toIso8601String().split('T')[0];
+        votingDates.add(formattedDate);
       }
       return votingDates.toList()..sort();
     } else {
       throw Exception('Failed to load voting dates');
     }
   }
+
 
   Future<List<Map<String, dynamic>>> getVotingDetails(int term, int mpId, int proceedingNumber, String date) async {
     final response = await http.get(Uri.parse('$baseUrl/term$term/MP/$mpId/votings/$proceedingNumber/$date'));
