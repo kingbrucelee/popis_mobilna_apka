@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Upewnij się, że te pliki istnieją, możesz je tymczasowo wykomentować, jeśli ich nie masz
 import 'views/Statystyki.dart';
 import 'views/Procesy_Parlamentarne.dart';
 import 'views/Analiza_Polityczna.dart';
@@ -10,7 +9,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IAPP',
+      title: 'Internetowa Analiza Polskiej Polityki',
       theme: ThemeData(
         primarySwatch: Colors.deepPurple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -30,7 +29,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80.0),
+        preferredSize: Size.fromHeight(100.0),
         child: AppBar(
           title: Padding(
             padding: const EdgeInsets.only(top: 20.0),
@@ -38,7 +37,7 @@ class HomeScreen extends StatelessWidget {
               'Internetowa Analiza Polskiej Polityki',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 22,
               ),
             ),
           ),
@@ -53,8 +52,8 @@ class HomeScreen extends StatelessWidget {
               SizedBox(height: 20),
               // Image with square frame
               Container(
-                width: 200,
-                height: 200,
+                width: 300,
+                height: 300,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
