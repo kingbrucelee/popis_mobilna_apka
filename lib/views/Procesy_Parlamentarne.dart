@@ -304,12 +304,16 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.bar_chart, size: 32),
-            SizedBox(width: 8),
-            Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
-          ],
+        centerTitle: true,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 18.0),
+          child: Row(
+            children: [
+              Icon(Icons.bar_chart, size: 32),
+              SizedBox(width: 8),
+              Text('Procesy Parlamentarne', style: TextStyle(fontSize: 24)),
+            ],
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -318,25 +322,25 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Tab(
               child: Text(
                 'Interpelacje',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
             Tab(
               child: Text(
                 'Ustawy',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
             Tab(
               child: Text(
                 'Komisje',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
             Tab(
               child: Text(
                 'Głosowania Posłów',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
           ],
@@ -429,57 +433,60 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   Widget _buildCommitteesTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTerm = int.tryParse(value) ?? 10;
-                    });
-                  },
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
+                  ),
                 ),
-              ),
-              SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: fetchCommittees,
-                child: Text('Pobierz komisje'),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _committees.isEmpty
-                  ? Text('Brak komisji do wyświetlenia.')
-                  : DropdownButton<String>(
-                      isExpanded: true,
-                      value: _selectedCommittee,
-                      hint: Text('Wybierz komisję'),
-                      items: _committees
-                          .map((committee) => DropdownMenuItem<String>(
-                                value: committee['code'],
-                                child: Text(committee['name']),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCommittee = value;
-                        });
-                        if (value != null) {
-                          fetchCommitteeDetails(value);
-                        }
-                      },
-                    ),
-          SizedBox(height: 16),
-          _committeeDetails == null
-              ? Text('Wybierz komisję, aby zobaczyć szczegóły.')
-              : _buildCommitteeDetails(),
-        ],
+                SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: fetchCommittees,
+                  child: Text('Pobierz komisje'),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : _committees.isEmpty
+                    ? Text('Brak komisji do wyświetlenia.')
+                    : DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedCommittee,
+                        hint: Text('Wybierz komisję'),
+                        items: _committees
+                            .map((committee) => DropdownMenuItem<String>(
+                                  value: committee['code'],
+                                  child: Text(committee['name']),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCommittee = value;
+                          });
+                          if (value != null) {
+                            fetchCommitteeDetails(value);
+                          }
+                        },
+                      ),
+            SizedBox(height: 16),
+            _committeeDetails == null
+                ? Text('Wybierz komisję, aby zobaczyć szczegóły.')
+                : _buildCommitteeDetails(),
+          ],
+        ),
       ),
     );
   }
@@ -507,8 +514,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   DataColumn(label: Text('Imię i nazwisko')),
                   DataColumn(label: Text('Stanowisko')),
                 ],
-                rows: _committeePresidium
-                    .expand((item) {
+                rows: _committeePresidium.expand((item) {
                   // Rozbijamy dane `members` i przypisujemy je do odpowiednich klubów
                   final members = item['members'] as Map<String, int>;
                   final clubs = item['clubs'] as Map<String, List<String>>;
@@ -518,8 +524,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     final club = clubs.entries
                         .firstWhere(
                           (clubEntry) => clubEntry.value.contains(member.key),
-                      orElse: () => MapEntry('Nieznany klub', []),
-                    )
+                          orElse: () => MapEntry('Nieznany klub', []),
+                        )
                         .key;
 
                     return DataRow(cells: [
@@ -527,8 +533,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       DataCell(Text(club)), // Klub
                     ]);
                   });
-                })
-                    .toList(),
+                }).toList(),
               ),
       ],
     );
@@ -615,10 +620,12 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                             true, // Prevent ListView from growing indefinitely
                         //physics: NeverScrollableScrollPhysics(),
                         children: _latestLaws.map((law) {
-                          return law['type']=='Rozporządzenie' ? ListTile(
-                            title: Text(law['title']),
-                            subtitle: Text('Typ: ${law['type']}'),
-                          ):Container();
+                          return law['type'] == 'Rozporządzenie'
+                              ? ListTile(
+                                  title: Text(law['title']),
+                                  subtitle: Text('Typ: ${law['type']}'),
+                                )
+                              : Container();
                         }).toList(),
                       ),
           ],
