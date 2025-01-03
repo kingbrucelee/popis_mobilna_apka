@@ -876,6 +876,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   }
 
   // ------------------------ POMOCNICZE (WSPÓLNE) ------------------------
+  /// 1) BarChart z dodanym `padding` i `reservedSize`, by uniknąć kolizji
   Widget buildBarChart(Map<String, int> data) {
     final clubEntries = data.entries.toList();
     final List<Color> availableColors = [
@@ -900,7 +901,9 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       children: [
         Container(
           height: 300,
-          padding: EdgeInsets.all(16),
+          // Dodany padding, żeby napisy się nie zderzały
+          padding:
+              const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
           child: BarChart(
             BarChartData(
               barGroups: clubEntries.asMap().entries.map((entry) {
@@ -925,6 +928,16 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                   sideTitles: SideTitles(showTitles: false),
                 ),
                 leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    // Zarezerwuj trochę miejsca na etykiety po lewej
+                    reservedSize: 32,
+                  ),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
@@ -1112,7 +1125,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     );
   }
 
-  // Histogram wieku
+  /// 2) Histogram wieku z dodanym `padding` i `reservedSize`, by uniknąć kolizji
   Widget buildAgeHistogram(List<int> ages) {
     Map<String, int> ageBins = {};
     for (int age in ages) {
@@ -1123,13 +1136,17 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
 
     final sortedBins = ageBins.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
+    final binsToDisplay = sortedBins.isNotEmpty
+        ? sortedBins.sublist(0, sortedBins.length)
+        : sortedBins;
 
     return Container(
       height: 300,
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.center,
-          barGroups: sortedBins.asMap().entries.map((entry) {
+          barGroups: binsToDisplay.asMap().entries.map((entry) {
             final index = entry.key;
             final bin = entry.value.key;
             final count = entry.value.value;
@@ -1148,16 +1165,35 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                reservedSize: 26,
                 getTitlesWidget: (value, meta) {
-                  if (value < 0 || value >= sortedBins.length) {
-                    return SizedBox();
+                  if (value < 0 || value >= binsToDisplay.length) {
+                    return const SizedBox();
                   }
-                  return Text(sortedBins[value.toInt()].key,
-                      style: TextStyle(fontSize: 10));
+                  return Text(
+                    binsToDisplay[value.toInt()].key,
+                    style: TextStyle(fontSize: 10),
+                  );
                 },
               ),
             ),
             leftTitles: AxisTitles(
+              sideTitles:
+                  SideTitles(showTitles: false), // Wyłączamy wartości po lewej
+            ),
+            rightTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 32,
+                getTitlesWidget: (value, meta) {
+                  if (value == meta.max) {
+                    return const SizedBox();
+                  }
+                  return Text(value.toInt().toString());
+                },
+              ),
+            ),
+            topTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
           ),
@@ -1696,6 +1732,7 @@ Widget _buildMpStatsOkreg(List<Mp> mpsList) {
 }
 
 // Pomocniczy widget generujący wiersz "Razem" (podsumowanie kolumn)
+// (nieużywany w powyższym DataTable, można ewentualnie rozbudować)
 DataRow _buildOkregSumRow(
   Map<String, Map<String, int>> districtData,
   List<String> allParties,

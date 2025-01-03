@@ -16,7 +16,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
   final VotingController _votingController =
       VotingController(); // Kontroler do obsługi głosowań
-
   final LegislativeController _legislativeController = LegislativeController();
 
   late TabController _tabController;
@@ -51,6 +50,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    // Po uruchomieniu aplikacji możesz też od razu pobrać komisje:
+    fetchCommittees();
   }
 
   @override
@@ -437,35 +438,117 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Tytuł: "Kadencja sejmu"
+            Text(
+              'Kadencja sejmu',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Wiersz: [liczba (czarne tło), minus (czerwone tło), plus (czarne tło)]
             Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedTerm = int.tryParse(value) ?? 10;
-                      });
-                    },
+                // Wyświetlenie bieżącej kadencji w czarnym polu
+                Container(
+                  width: 60,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$_selectedTerm',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: fetchCommittees,
-                  child: Text('Pobierz komisje'),
+                const SizedBox(width: 16),
+
+                // Przycisk "-"
+                InkWell(
+                  onTap: () {
+                    // Po zmianie numeru kadencji wywołujemy fetchCommittees().
+                    setState(() {
+                      _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                    });
+                    fetchCommittees();
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      '-',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Przycisk "+"
+                InkWell(
+                  onTap: () {
+                    // Po zmianie numeru kadencji wywołujemy fetchCommittees().
+                    setState(() {
+                      _selectedTerm++;
+                    });
+                    fetchCommittees();
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      '+',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+
+            // Tytuł sekcji z komisjami
+            const Text(
+              'Komisja, której statystyki cię interesują',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Lista rozwijana lub komunikaty
             _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : _committees.isEmpty
-                    ? Text('Brak komisji do wyświetlenia.')
+                    ? const Text('Brak komisji do wyświetlenia.')
                     : DropdownButton<String>(
                         isExpanded: true,
                         value: _selectedCommittee,
-                        hint: Text('Wybierz komisję'),
+                        hint: const Text('Wybierz komisję'),
                         items: _committees
                             .map((committee) => DropdownMenuItem<String>(
                                   value: committee['code'],
@@ -481,9 +564,17 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                           }
                         },
                       ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+
+            // Usuwamy przycisk 'Pobierz komisje', bo wszystko dzieje się automatycznie
+            // ElevatedButton(
+            //   onPressed: fetchCommittees,
+            //   child: const Text('Pobierz komisje'),
+            // ),
+
+            // Szczegóły wybranej komisji
             _committeeDetails == null
-                ? Text('Wybierz komisję, aby zobaczyć szczegóły.')
+                ? const Text('Wybierz komisję, aby zobaczyć szczegóły.')
                 : _buildCommitteeDetails(),
           ],
         ),
@@ -618,7 +709,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     : ListView(
                         shrinkWrap:
                             true, // Prevent ListView from growing indefinitely
-                        //physics: NeverScrollableScrollPhysics(),
                         children: _latestLaws.map((law) {
                           return law['type'] == 'Rozporządzenie'
                               ? ListTile(
