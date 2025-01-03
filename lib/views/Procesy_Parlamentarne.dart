@@ -439,13 +439,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Tytuł: "Kadencja sejmu"
-            Text(
-              'Kadencja sejmu',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text('Kadencja sejmu',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
             const SizedBox(height: 8),
 
             // Wiersz: [liczba (czarne tło), minus (czerwone tło), plus (czarne tło)]
@@ -454,12 +449,12 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
               children: [
                 // Wyświetlenie bieżącej kadencji w czarnym polu
                 Container(
-                  width: 60,
-                  height: 40,
+                  width: 220,
+                  height: 50,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '$_selectedTerm',
@@ -469,7 +464,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
 
                 // Przycisk "-"
                 InkWell(
@@ -481,24 +476,17 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     fetchCommittees();
                   },
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 70,
+                    height: 50,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: Colors.red,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      '-',
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
 
                 // Przycisk "+"
                 InkWell(
@@ -510,21 +498,14 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     fetchCommittees();
                   },
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 70,
+                    height: 50,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(4),
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      '+',
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Icon(Icons.add, color: Colors.white),
                   ),
                 ),
               ],
@@ -534,9 +515,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             // Tytuł sekcji z komisjami
             const Text(
               'Komisja, której statystyki cię interesują',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
             ),
             const SizedBox(height: 8),
 
@@ -574,7 +552,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
 
             // Szczegóły wybranej komisji
             _committeeDetails == null
-                ? const Text('Wybierz komisję, aby zobaczyć szczegóły.')
+                ? const Text('')
                 : _buildCommitteeDetails(),
           ],
         ),
