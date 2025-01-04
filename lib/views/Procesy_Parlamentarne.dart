@@ -362,47 +362,143 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   Widget _buildInterpelationTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Kadencja i numer interpelacji',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Container(
+                  width: 220,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$_selectedTerm',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
                     setState(() {
-                      _selectedTerm = int.tryParse(value) ?? 10;
+                      _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
                     });
                   },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
                 ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(labelText: 'Numer Interpelacji'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
                     setState(() {
-                      _selectedInterpelation = int.tryParse(value) ?? 1;
+                      _selectedTerm++;
                     });
                   },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
                 ),
-              ),
-              SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: fetchInterpelationDetails,
-                child: Text('Pokaż'),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _isLoading
-              ? CircularProgressIndicator()
-              : _interpelationDetails == null
-                  ? Text('Wprowadź dane i kliknij "Pokaż".')
-                  : _buildInterpelationDetails(),
-        ],
+              ],
+            ),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Container(
+                  width: 220,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$_selectedInterpelation',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedInterpelation = _selectedInterpelation > 1
+                          ? _selectedInterpelation - 1
+                          : 1;
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red[400],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedInterpelation++;
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[600],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: fetchInterpelationDetails,
+              child: Text('Pokaż szczegóły'),
+            ),
+            SizedBox(height: 16),
+            _isLoading
+                ? CircularProgressIndicator()
+                : _interpelationDetails == null
+                    ? Text('Wprowadź dane i kliknij "Pokaż szczegóły".')
+                    : _buildInterpelationDetails(),
+          ],
+        ),
       ),
     );
   }
@@ -438,16 +534,12 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tytuł: "Kadencja sejmu"
             Text('Kadencja sejmu',
                 style: TextStyle(fontSize: 18, color: Colors.black)),
             const SizedBox(height: 8),
-
-            // Wiersz: [liczba (czarne tło), minus (czerwone tło), plus (czarne tło)]
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Wyświetlenie bieżącej kadencji w czarnym polu
                 Container(
                   width: 220,
                   height: 50,
@@ -465,13 +557,11 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Przycisk "-"
                 InkWell(
                   onTap: () {
-                    // Po zmianie numeru kadencji wywołujemy fetchCommittees().
                     setState(() {
                       _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                      _selectedCommittee = null; // Resetowanie wybranej komisji
                     });
                     fetchCommittees();
                   },
@@ -487,13 +577,11 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Przycisk "+"
                 InkWell(
                   onTap: () {
-                    // Po zmianie numeru kadencji wywołujemy fetchCommittees().
                     setState(() {
                       _selectedTerm++;
+                      _selectedCommittee = null; // Resetowanie wybranej komisji
                     });
                     fetchCommittees();
                   },
@@ -511,14 +599,10 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Tytuł sekcji z komisjami
             const Text(
               'Komisja, której statystyki cię interesują',
             ),
             const SizedBox(height: 8),
-
-            // Lista rozwijana lub komunikaty
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _committees.isEmpty
@@ -543,14 +627,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                         },
                       ),
             const SizedBox(height: 16),
-
-            // Usuwamy przycisk 'Pobierz komisje', bo wszystko dzieje się automatycznie
-            // ElevatedButton(
-            //   onPressed: fetchCommittees,
-            //   child: const Text('Pobierz komisje'),
-            // ),
-
-            // Szczegóły wybranej komisji
             _committeeDetails == null
                 ? const Text('')
                 : _buildCommitteeDetails(),
