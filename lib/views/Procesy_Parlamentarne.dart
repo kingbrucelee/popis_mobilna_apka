@@ -688,28 +688,75 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SingleChildScrollView(
-        // Add this to make content scrollable
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('Kadencja i procesy legislacyjne',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
+            SizedBox(height: 8),
             Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedTerm = int.tryParse(value) ?? 10;
-                      });
-                    },
+                Container(
+                  width: 220,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$_selectedTerm',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: fetchLegislativeProcesses,
-                  child: Text('Pobierz procesy legislacyjne'),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                      _resetLegislativeData();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTerm++;
+                      _resetLegislativeData();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
                 ),
               ],
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: fetchLegislativeProcesses,
+              child: Text('Pobierz procesy legislacyjne'),
             ),
             SizedBox(height: 16),
             _isLoading
@@ -741,14 +788,69 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 ? Text('Wybierz proces, aby zobaczyć szczegóły.')
                 : _buildProcessDetails(),
             Divider(),
-            TextField(
-              decoration: InputDecoration(labelText: 'Rok'),
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  _selectedYear = int.tryParse(value) ?? DateTime.now().year;
-                });
-              },
+            Text('Rok ustaw',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Container(
+                  width: 220,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$_selectedYear',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedYear = _selectedYear > 2000
+                          ? _selectedYear - 1
+                          : _selectedYear;
+                      _resetLatestLaws();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedYear++;
+                      _resetLatestLaws();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 16),
             ElevatedButton(
@@ -761,21 +863,30 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 : _latestLaws.isEmpty
                     ? Text('Brak dostępnych aktów prawnych.')
                     : ListView(
-                        shrinkWrap:
-                            true, // Prevent ListView from growing indefinitely
+                        shrinkWrap: true,
                         children: _latestLaws.map((law) {
-                          return law['type'] == 'Rozporządzenie'
-                              ? ListTile(
-                                  title: Text(law['title']),
-                                  subtitle: Text('Typ: ${law['type']}'),
-                                )
-                              : Container();
+                          return ListTile(
+                            title: Text(law['title']),
+                            subtitle: Text('Typ: ${law['type']}'),
+                          );
                         }).toList(),
                       ),
           ],
         ),
       ),
     );
+  }
+
+// Resetowanie danych procesów legislacyjnych
+  void _resetLegislativeData() {
+    _legislativeProcesses = [];
+    _processDetails = null;
+    _selectedProcess = null;
+  }
+
+// Resetowanie danych aktów prawnych
+  void _resetLatestLaws() {
+    _latestLaws = [];
   }
 
   Widget _buildProcessDetails() {
@@ -813,25 +924,72 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('Kadencja i głosowania posłów',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
+            SizedBox(height: 8),
             Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(labelText: 'Numer Kadencji'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedTerm = int.tryParse(value) ?? 10;
-                      });
-                    },
+                Container(
+                  width: 220,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$_selectedTerm',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: fetchMps,
-                  child: Text('Pobierz posłów'),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                      _resetVotingData();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTerm++;
+                      _resetVotingData();
+                    });
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
                 ),
               ],
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: fetchMps,
+              child: Text('Pobierz posłów'),
             ),
             SizedBox(height: 16),
             _isLoading
@@ -854,6 +1012,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                             onChanged: (value) {
                               setState(() {
                                 _selectedMp = value;
+                                _resetProceedingAndVotingData();
                               });
                             },
                           ),
@@ -882,6 +1041,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                         onChanged: (value) {
                           setState(() {
                             _selectedProceedingNumber = value;
+                            _resetVotingDates();
                           });
                         },
                       ),
@@ -930,6 +1090,27 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+// Resetowanie danych związanych z głosowaniami
+  void _resetVotingData() {
+    _mps = [];
+    _selectedMp = null;
+    _resetProceedingAndVotingData();
+  }
+
+// Resetowanie danych posiedzeń i głosowań
+  void _resetProceedingAndVotingData() {
+    _proceedingNumbers = [];
+    _selectedProceedingNumber = null;
+    _resetVotingDates();
+  }
+
+// Resetowanie dat głosowań i szczegółów głosowań
+  void _resetVotingDates() {
+    _votingDates = [];
+    _selectedVotingDate = null;
+    _votingDetails = [];
   }
 
   Widget _buildVotingDetails() {
