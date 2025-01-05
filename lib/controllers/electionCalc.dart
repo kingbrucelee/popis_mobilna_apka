@@ -1,7 +1,7 @@
 // controllers/electionCalc.dart
 import 'dart:math' as math;
 
-/// Struktura przykładowego wiersza danych (odpowiednik jednego `distric` w pythonie).
+/// Struktura przykładowego wiersza danych (odpowiednik jednego `district` w Pythonie).
 /// Zawiera klucz `Liczba głosów ważnych oddanych łącznie na wszystkie listy kandydatów`
 /// oraz nazwy kolumn z komitetami.
 class CsvRow {
@@ -34,7 +34,8 @@ Map<String, dynamic> calculateVotes({
   for (var row in csvData) {
     for (var columnName in row.data.keys) {
       if (columnName.toUpperCase().contains("KOMITET")) {
-        votes[columnName] = (votes[columnName] ?? 0.0) + row.data[columnName]!;
+        votes[columnName] =
+            (votes[columnName] ?? 0.0) + (row.data[columnName] ?? 0.0);
       }
     }
 
@@ -50,6 +51,7 @@ Map<String, dynamic> calculateVotes({
     if (key == "Frekwencja") return;
     final result = (val * 100.0) / totalVotes;
     if (result >= votesNeeded) {
+      // Sprawdzamy, czy to komitet koalicyjny
       if (key.toUpperCase().contains("KOALICYJNY")) {
         if (result >= votesNeededForCoalition) {
           clubsWithSeats.add(key);
@@ -90,7 +92,7 @@ Map<String, Map<String, int>> chooseMethod({
     seatDictAll[element] = 0;
   }
 
-  // Przykładowa liczba mandatów w poszczególnych okręgach
+  // Przykładowa liczba mandatów w poszczególnych okręgach (dla uproszczenia):
   final List<int> seats = [
     12,
     8,
@@ -268,6 +270,7 @@ Map<String, int> sainteLague(
 
     seatsDict[maxParty] = (seatsDict[maxParty] ?? 0) + 1;
 
+    // Dzielnik 2n+1
     voteDictCopy[maxParty] =
         voteDict[maxParty]! / (2.0 * seatsDict[maxParty]! + 1.0);
   }
@@ -306,24 +309,30 @@ Map<String, int> hareDrop(
   final voteDictCopy = Map<String, double>.from(voteDict);
   int remainingSeats = seatsNum;
 
+  // 1. Każdej partii przypisujemy "podstawowe" mandaty = floor((partia_glosy * seatsNum) / freq)
   voteDictCopy.forEach((party, votes) {
     final value = (votes * seatsNum) / freq;
     final baseSeats = value.floor();
     seatsDict[party] = baseSeats;
-    voteDictCopy[party] = value - baseSeats;
+    voteDictCopy[party] = value - baseSeats; // reszta
     remainingSeats -= baseSeats;
   });
 
+  // 2. Rozdzielamy pozostałe mandaty wg. największych / najmniejszych reszt
   for (int i = 0; i < remainingSeats; i++) {
     if (biggest) {
+      // Metoda największych reszt: wybieramy partię z najwyższą resztą
       final maxParty = voteDictCopy.keys.reduce((curr, next) =>
           voteDictCopy[curr]! > voteDictCopy[next]! ? curr : next);
       seatsDict[maxParty] = (seatsDict[maxParty] ?? 0) + 1;
-      voteDictCopy[maxParty] = 0.0;
+      voteDictCopy[maxParty] = 0.0; // "wyzerowujemy" resztę
     } else {
+      // Metoda najmniejszych reszt: wybieramy partię z najniższą (ale dodatnią) resztą
+      // (jeśli w resztach są same zera, to i tak wszystkie równe – można dodać mandat "pierwszej z listy")
       final minParty = voteDictCopy.keys.reduce((curr, next) =>
           voteDictCopy[curr]! < voteDictCopy[next]! ? curr : next);
       seatsDict[minParty] = (seatsDict[minParty] ?? 0) + 1;
+      // Aby "ominąć" tę partię w kolejnej iteracji
       voteDictCopy[minParty] = double.infinity;
     }
   }

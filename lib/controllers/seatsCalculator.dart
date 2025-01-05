@@ -21,15 +21,6 @@ class SeatsCalculatorSingleDistrict {
     required String method,
     required int seatsNum,
   }) {
-    // Podstawowy słownik z liczbą mandatów (startowo 0)
-    Map<String, int> seatsDict = {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-    };
-
     // Słownik z głosami
     final voteDict = <String, double>{
       "PiS": PiS,
@@ -39,12 +30,21 @@ class SeatsCalculatorSingleDistrict {
       "Konfederacja": Konf,
     };
 
-    // Wyniki
+    // Wynik
     Map<String, int> recivedVotes = {};
     Map<String, int> nextSeat = {};
     Map<String, int> prevSeat = {};
 
-    // Szybki sposób na czystą kopię seatsDict
+    // Startowe 0 mandatów
+    Map<String, int> seatsDict = {
+      "PiS": 0,
+      "KO": 0,
+      "Trzecia Droga": 0,
+      "Lewica": 0,
+      "Konfederacja": 0,
+    };
+
+    // Pomocnicza funkcja do tworzenia świeżego (zerowego) słownika
     Map<String, int> _freshSeats() => {
           "PiS": 0,
           "KO": 0,
@@ -53,18 +53,25 @@ class SeatsCalculatorSingleDistrict {
           "Konfederacja": 0,
         };
 
+    // Na wypadek, gdyby seatsNum był <= 0
+    if (seatsNum <= 0) {
+      return {
+        "recivedVotes": seatsDict,
+        "differencesNxt": <String>{},
+        "differencesPrev": <String>{},
+      };
+    }
+
+    // Wybór metody:
     switch (method) {
       case "d'Hondta":
-        // główny wynik
         recivedVotes = dhont(
           Map<String, int>.from(seatsDict),
           voteDict,
           seatsNum,
         );
-        // seatsNum + 1
         nextSeat = dhont(_freshSeats(), voteDict, seatsNum + 1);
-        // seatsNum - 1
-        if (seatsNum - 1 >= 0) {
+        if (seatsNum - 1 > 0) {
           prevSeat = dhont(_freshSeats(), voteDict, seatsNum - 1);
         }
         break;
@@ -76,7 +83,7 @@ class SeatsCalculatorSingleDistrict {
           seatsNum,
         );
         nextSeat = sainteLague(_freshSeats(), voteDict, seatsNum + 1);
-        if (seatsNum - 1 >= 0) {
+        if (seatsNum - 1 > 0) {
           prevSeat = sainteLague(_freshSeats(), voteDict, seatsNum - 1);
         }
         break;
@@ -96,7 +103,7 @@ class SeatsCalculatorSingleDistrict {
           Freq,
           biggest: true,
         );
-        if (seatsNum - 1 >= 0) {
+        if (seatsNum - 1 > 0) {
           prevSeat = hareDrop(
             _freshSeats(),
             voteDict,
@@ -122,7 +129,7 @@ class SeatsCalculatorSingleDistrict {
           Freq,
           biggest: false,
         );
-        if (seatsNum - 1 >= 0) {
+        if (seatsNum - 1 > 0) {
           prevSeat = hareDrop(
             _freshSeats(),
             voteDict,
