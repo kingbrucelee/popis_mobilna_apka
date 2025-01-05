@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../controllers/seatsCalculator.dart';
 
 class View3 extends StatefulWidget {
+  const View3({Key? key}) : super(key: key);
+
   @override
   _View3State createState() => _View3State();
 }
@@ -725,6 +727,13 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  /// Przykładowa funkcja budująca zawartość nieużywanych jeszcze zakładek
+  Widget _buildTabContent(String title) {
+    return Center(
+      child: Text('$title content here', style: const TextStyle(fontSize: 14)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -735,7 +744,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: const [
               Icon(Icons.bar_chart, size: 32),
               SizedBox(width: 8),
               Text(
@@ -748,7 +757,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.red,
-          tabs: [
+          tabs: const [
             Tab(
               child: Text(
                 'Potencjalne Koalicje',
@@ -800,12 +809,6 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       ),
     );
   }
-
-  Widget _buildTabContent(String title) {
-    return Center(
-      child: Text('$title content here', style: TextStyle(fontSize: 14)),
-    );
-  }
 }
 
 /// Zakładka z kalkulatorem wyborczym
@@ -828,11 +831,11 @@ class ElectionCalculatorTab extends StatefulWidget {
 }
 
 class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
-  String _type = "ilościowy"; // np. "ilościowy" albo "procentowy"
+  String _type = "ilościowy"; // Opcje: "ilościowy" lub "procentowy"
   String _method = "d'Hondta";
   late String _selectedDistrict;
 
-  // Tymczasowe pola do UI, uzupełniane w _loadDistrictValues:
+  // Pola tymczasowe do UI, wczytywane z dataJson/votesJson.
   double _pis = 0.0,
       _ko = 0.0,
       _td = 0.0,
@@ -844,23 +847,99 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   // Przechowujemy wynik kalkulacji
   Map<String, int> _resultSeats = {};
 
+  // Kontrolery do textFieldów (dzięki nim wartości w polach są zawsze aktualne)
+  late TextEditingController _pisController,
+      _koController,
+      _tdController,
+      _lewicaController,
+      _konfController,
+      _frequencyController,
+      _seatsController;
+
   @override
   void initState() {
     super.initState();
-    // Domyślnie wybieramy pierwszy okręg z mapy:
     _selectedDistrict = widget.dataJson.keys.first;
     _loadDistrictValues(_selectedDistrict);
+
+    // Inicjalizacja kontrolerów
+    _pisController = TextEditingController();
+    _koController = TextEditingController();
+    _tdController = TextEditingController();
+    _lewicaController = TextEditingController();
+    _konfController = TextEditingController();
+    _frequencyController = TextEditingController();
+    _seatsController = TextEditingController();
+
+    // Ustawiamy wartości początkowe
+    _setControllersValues();
+  }
+
+  @override
+  void dispose() {
+    _pisController.dispose();
+    _koController.dispose();
+    _tdController.dispose();
+    _lewicaController.dispose();
+    _konfController.dispose();
+    _frequencyController.dispose();
+    _seatsController.dispose();
+    super.dispose();
+  }
+
+  /// Ładuje wartości z widget.dataJson i widget.votesJson do pól tymczasowych
+  void _loadDistrictValues(String district) {
+    final distData = widget.dataJson[district];
+    final distVotes = widget.votesJson[district];
+    if (distData != null && distVotes != null) {
+      _pis = distVotes["PiS"]?.toDouble() ?? 0.0;
+      _ko = distVotes["KO"]?.toDouble() ?? 0.0;
+      _td = distVotes["Trzecia Droga"]?.toDouble() ?? 0.0;
+      _lewica = distVotes["Lewica"]?.toDouble() ?? 0.0;
+      _konf = distVotes["Konfederacja"]?.toDouble() ?? 0.0;
+
+      _frequency = distData["Frekwencja"]?.toDouble() ?? 0.0;
+      _seatsNum = distData["Miejsca do zdobycia"] ?? 0;
+    }
+  }
+
+  /// Aktualizuje wartości w polach tekstowych
+  void _setControllersValues() {
+    _pisController.text = _pis == 0.0 ? '' : _pis.toString();
+    _koController.text = _ko == 0.0 ? '' : _ko.toString();
+    _tdController.text = _td == 0.0 ? '' : _td.toString();
+    _lewicaController.text = _lewica == 0.0 ? '' : _lewica.toString();
+    _konfController.text = _konf == 0.0 ? '' : _konf.toString();
+    _frequencyController.text = _frequency == 0.0 ? '' : _frequency.toString();
+    _seatsController.text = _seatsNum == 0 ? '' : _seatsNum.toString();
+  }
+
+  /// Zapamiętuje wartości w polach tymczasowych (z kontrolerów)
+  void _updateTempValuesFromControllers() {
+    _pis = _parseDouble(_pisController.text);
+    _ko = _parseDouble(_koController.text);
+    _td = _parseDouble(_tdController.text);
+    _lewica = _parseDouble(_lewicaController.text);
+    _konf = _parseDouble(_konfController.text);
+    _frequency = _parseDouble(_frequencyController.text);
+    _seatsNum = int.tryParse(_seatsController.text) ?? 0;
+  }
+
+  /// Pomocnicza funkcja parsująca double z ewentualną zamianą przecinka na kropkę
+  double _parseDouble(String val) {
+    return double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
   }
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Dropdown z wyborem okręgu
-          Text('Wybierz okręg:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Wybierz okręg:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           DropdownButton<String>(
             value: _selectedDistrict,
             items: widget.dataJson.keys.map<DropdownMenuItem<String>>((dist) {
@@ -874,43 +953,81 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
                 setState(() {
                   _selectedDistrict = value;
                   _loadDistrictValues(value);
+                  _setControllersValues();
                 });
               }
             },
           ),
-          Divider(),
+          const Divider(),
 
-          // Pola do wprowadzania liczby głosów:
-          _buildNumberField('PiS', _pis, (val) {
-            setState(() => _pis = val);
-          }),
-          _buildNumberField('KO', _ko, (val) {
-            setState(() => _ko = val);
-          }),
-          _buildNumberField('Trzecia Droga', _td, (val) {
-            setState(() => _td = val);
-          }),
-          _buildNumberField('Lewica', _lewica, (val) {
-            setState(() => _lewica = val);
-          }),
-          _buildNumberField('Konfederacja', _konf, (val) {
-            setState(() => _konf = val);
-          }),
+          // Dropdown do wyboru typu głosów
+          const Text('Rodzaj głosów:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          DropdownButton<String>(
+            value: _type,
+            items: const [
+              DropdownMenuItem(
+                value: "ilościowy",
+                child: Text("Ilościowy"),
+              ),
+              DropdownMenuItem(
+                value: "procentowy",
+                child: Text("Procentowy"),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _type = value;
+                });
+              }
+            },
+          ),
+          const Divider(),
+
+          // Pola do wprowadzania głosów
+          _buildNumberField(
+            label: 'PiS (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _pisController,
+          ),
+          _buildNumberField(
+            label: 'KO (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _koController,
+          ),
+          _buildNumberField(
+            label: 'Trzecia Droga (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _tdController,
+          ),
+          _buildNumberField(
+            label: 'Lewica (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _lewicaController,
+          ),
+          _buildNumberField(
+            label: 'Konfederacja (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _konfController,
+          ),
 
           // Frekwencja
-          _buildNumberField('Frekwencja (np. 100000 głosów)', _frequency,
-              (val) {
-            setState(() => _frequency = val);
-          }),
+          _buildNumberField(
+            label: 'Frekwencja (${_type == "procentowy" ? "%" : "głosów"})',
+            controller: _frequencyController,
+          ),
 
           // Liczba miejsc
-          _buildSeatsField(),
+          TextField(
+            keyboardType: TextInputType.number,
+            decoration:
+                const InputDecoration(labelText: 'Liczba mandatów w okręgu'),
+            controller: _seatsController,
+          ),
 
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // Metoda podziału:
-          Text('Wybierz metodę:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Wybierz metodę:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           DropdownButton<String>(
             value: _method,
             items: [
@@ -933,56 +1050,64 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
             },
           ),
 
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // Przycisk obliczania
           ElevatedButton(
             onPressed: _calculateSeats,
-            child: Text('Oblicz podział mandatów'),
+            child: const Text('Oblicz podział mandatów'),
           ),
 
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // Wyświetlanie wyniku
-          Text(
+          const Text(
             'Wynik podziału mandatów:',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           if (_resultSeats.isNotEmpty)
-            ..._resultSeats.entries.map((e) => Text('${e.key}: ${e.value}')),
+            ..._resultSeats.entries.map((e) {
+              return Text('${e.key}: ${e.value}');
+            }),
 
-          SizedBox(height: 100),
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
-  /// Ładuje wartości z widget.dataJson i widget.votesJson do pól tymczasowych
-  void _loadDistrictValues(String district) {
-    final distData = widget.dataJson[district];
-    final distVotes = widget.votesJson[district];
-    if (distData != null && distVotes != null) {
-      setState(() {
-        _pis = distVotes["PiS"]?.toDouble() ?? 0.0;
-        _ko = distVotes["KO"]?.toDouble() ?? 0.0;
-        _td = distVotes["Trzecia Droga"]?.toDouble() ?? 0.0;
-        _lewica = distVotes["Lewica"]?.toDouble() ?? 0.0;
-        _konf = distVotes["Konfederacja"]?.toDouble() ?? 0.0;
-        _frequency = distData["Frekwencja"]?.toDouble() ?? 0.0;
-        _seatsNum = distData["Miejsca do zdobycia"] ?? 0;
-      });
-    }
-  }
-
-  /// Zapisuje wprowadzone wartości z pól do widget.dataJson i widget.votesJson,
-  /// a następnie wywołuje SeatsCalculatorSingleDistrict
+  /// Funkcja obliczająca podział mandatów
   void _calculateSeats() {
-    // Zaktualizuj głosy i frekwencję
-    widget.votesJson[_selectedDistrict]["PiS"] = _pis;
-    widget.votesJson[_selectedDistrict]["KO"] = _ko;
-    widget.votesJson[_selectedDistrict]["Trzecia Droga"] = _td;
-    widget.votesJson[_selectedDistrict]["Lewica"] = _lewica;
-    widget.votesJson[_selectedDistrict]["Konfederacja"] = _konf;
+    // Najpierw wczytujemy aktualne wartości z kontrolerów
+    _updateTempValuesFromControllers();
+
+    // Sprawdzenie poprawności danych w przypadku procentów
+    if (_type == "procentowy") {
+      double totalPercentage = _pis + _ko + _td + _lewica + _konf;
+      if (totalPercentage > 100.0) {
+        _showErrorDialog("Suma procentów przekracza 100%.");
+        return;
+      }
+      // Można też sprawdzać czy sumy < 100% itp.
+    }
+
+    // Przekształcenie procentów na głosy, jeśli wybrano opcję procentową
+    // (interpretujemy _frequency jako łączną liczbę głosów?)
+    double totalVotes = _frequency;
+    double actualPis = _type == "procentowy" ? (_pis / 100) * totalVotes : _pis;
+    double actualKo = _type == "procentowy" ? (_ko / 100) * totalVotes : _ko;
+    double actualTd = _type == "procentowy" ? (_td / 100) * totalVotes : _td;
+    double actualLewica =
+        _type == "procentowy" ? (_lewica / 100) * totalVotes : _lewica;
+    double actualKonf =
+        _type == "procentowy" ? (_konf / 100) * totalVotes : _konf;
+
+    // Zaktualizuj głosy i frekwencję w oryginalnych mapach
+    widget.votesJson[_selectedDistrict]["PiS"] = actualPis;
+    widget.votesJson[_selectedDistrict]["KO"] = actualKo;
+    widget.votesJson[_selectedDistrict]["Trzecia Droga"] = actualTd;
+    widget.votesJson[_selectedDistrict]["Lewica"] = actualLewica;
+    widget.votesJson[_selectedDistrict]["Konfederacja"] = actualKonf;
 
     widget.dataJson[_selectedDistrict]["Frekwencja"] = _frequency;
     widget.dataJson[_selectedDistrict]["Miejsca do zdobycia"] = _seatsNum;
@@ -993,11 +1118,11 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
 
     // Oblicz mandaty
     final result = SeatsCalculatorSingleDistrict.chooseMethods(
-      PiS: _pis,
-      KO: _ko,
-      TD: _td,
-      Lewica: _lewica,
-      Konf: _konf,
+      PiS: actualPis,
+      KO: actualKo,
+      TD: actualTd,
+      Lewica: actualLewica,
+      Konf: actualKonf,
       Freq: _frequency,
       method: _method,
       seatsNum: _seatsNum,
@@ -1012,32 +1137,35 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     });
   }
 
-  Widget _buildNumberField(
-    String label,
-    double initialValue,
-    ValueChanged<double> onChanged,
-  ) {
-    return TextField(
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label),
-      controller: TextEditingController(text: initialValue.toString()),
-      onChanged: (val) {
-        final parsed = double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
-        onChanged(parsed);
-      },
+  /// Wyświetla dialog błędu
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Błąd"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSeatsField() {
+  /// Pomocnicze pole do wprowadzania wartości double
+  Widget _buildNumberField({
+    required String label,
+    required TextEditingController controller,
+  }) {
     return TextField(
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: 'Liczba mandatów w okręgu'),
-      controller: TextEditingController(text: _seatsNum.toString()),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
+      controller: controller,
       onChanged: (val) {
-        final parsed = int.tryParse(val) ?? 0;
-        setState(() {
-          _seatsNum = parsed;
-        });
+        // Można dodatkowo wymusić odświeżenie stanu itp.
+        // setState(() {});
       },
     );
   }
