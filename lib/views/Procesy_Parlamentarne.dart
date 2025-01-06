@@ -12,6 +12,8 @@ class View2 extends StatefulWidget {
 class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final InterpelationController _interpelationController =
       InterpelationController(); // Kontroler do obsługi API
+  TextEditingController _interpelationController2 = TextEditingController();
+
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
   final VotingController _votingController =
@@ -433,17 +435,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[600],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedInterpelation',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _interpelationController2,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[600],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedInterpelation = int.tryParse(value) ?? 1;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -453,6 +464,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       _selectedInterpelation = _selectedInterpelation > 1
                           ? _selectedInterpelation - 1
                           : 1;
+                      _interpelationController2.text =
+                          _selectedInterpelation.toString();
                     });
                   },
                   child: Container(
@@ -471,6 +484,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedInterpelation++;
+                      _interpelationController2.text =
+                          _selectedInterpelation.toString();
                     });
                   },
                   child: Container(
@@ -495,13 +510,14 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             _isLoading
                 ? CircularProgressIndicator()
                 : _interpelationDetails == null
-                    ? Text('Wprowadź dane i kliknij "Pokaż szczegóły".')
-                    : _buildInterpelationDetails(),
+                ? Text('Wprowadź dane i kliknij "Pokaż szczegóły".')
+                : _buildInterpelationDetails(),
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildInterpelationDetails() {
     if (_interpelationDetails == null) {
@@ -565,16 +581,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     });
                     fetchCommittees();
                   },
-                  child: Container(
-                    width: 70,
-                    height: 50,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.remove, color: Colors.white),
-                  ),
+
                 ),
                 const SizedBox(width: 8),
                 InkWell(

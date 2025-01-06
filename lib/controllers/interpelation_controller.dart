@@ -121,9 +121,9 @@ class InterpelationController {
       return {
         'title': json['title'],
         'sentDate': json['sentDate'],
-        //'authors': json['from'].map<String>((author) => author['name']).toList(),
+        //authors': json['from'].map<String>((author) => author['name']).toList(),
         'response': json['replies'].isNotEmpty
-            ? 'Odpowiedź w załączniku:\n${fileUrls.where((url) => url != null).join(', ')}\nHTMLs:\n${textContent}'
+            ? '${textContent}\nOdpowiedź w załączniku:\n${fileUrls.where((url) => url != null).join(', ')}'
             : 'Brak odpowiedzi',
       };
     } else {
