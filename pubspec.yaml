@@ -58,6 +58,13 @@ flutter:
   uses-material-design: true
   assets:
     - images/sejm.jpg
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2001.csv
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2005.csv
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2007.csv
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2011.csv
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2015.csv
+    - Data/wyniki_gl_na_listy_po_okregach_sejm_utf8_2019.csv
+    - Data/wyniki_gl_na_listy_po_gminach_sejm_utf8.csv
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

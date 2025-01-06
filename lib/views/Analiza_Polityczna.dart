@@ -1,7 +1,14 @@
+// views/Analiza_Polityczna.dart
+
 import 'package:flutter/material.dart';
-// Upewnij się, że import jest zgodny z Twoją strukturą katalogów:
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:csv/csv.dart' as csv;
+import 'dart:math' as math;
+
 import '../controllers/seatsCalculator.dart';
-import '../api_wrappers/clubs.dart';
+import '../controllers/electionCalc.dart';
+
+/// Główny widget ekranu z zakładkami
 class View3 extends StatefulWidget {
   const View3({Key? key}) : super(key: key);
 
@@ -11,10 +18,6 @@ class View3 extends StatefulWidget {
 
 class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int termNumber = 10;
-  List<dynamic> coalitions = [];
-
-
 
   Map<String, dynamic> dataJson = {
     "Legnica": {
@@ -723,13 +726,6 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _loadCoalitions();
-  }
-  void _loadCoalitions() async {
-    List<dynamic> fetchedCoalitions = await findMinimalCoalitions(termNumber);
-    setState(() {
-      coalitions = fetchedCoalitions;
-    });
   }
 
   @override
@@ -744,61 +740,6 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       child: Text('$title content here', style: const TextStyle(fontSize: 14)),
     );
   }
-
-  Widget _buildPotentialCoalitionTab() {
-    if (coalitions.isEmpty) {
-      return Center(child: CircularProgressIndicator());
-    }
-
-    return Column(
-      children: [
-        Text('Potencjalne Koalicje', style: TextStyle(fontSize: 24)),
-        Expanded(
-          child: ListView.builder(
-            itemCount: coalitions.length,
-            itemBuilder: (context, index) {
-              var coalition = coalitions[index];
-              var totalMPs = coalition.fold(0, (sum, club) => sum + club['membersCount']);
-              var clubs = coalition.map((club) => club['id']).join(', ');
-
-              return ListTile(
-                title: Text('Koalicja ${index + 1}'),
-                subtitle: Text('Łączna ilość posłów: $totalMPs\nKluby: $clubs'),
-                onTap: () => _showCoalitionDetails(context, coalition),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showCoalitionDetails(BuildContext context, List<dynamic> coalition) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Szczegóły Koalicji'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: coalition.map((club) {
-              return ListTile(
-                title: Text(club['id']),
-                subtitle: Text('Posłów: ${club['membersCount']}'),
-              );
-            }).toList(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Zamknij'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -854,30 +795,61 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildPotentialCoalitionTab(),
-          ElectionCalculatorTab(
-            dataJson: dataJson,
-            votesJson: votesJson,
-            onDataJsonChanged: (updated) {
-              setState(() {
-                dataJson = updated;
-              });
-            },
-            onVotesJsonChanged: (updated) {
-              setState(() {
-                votesJson = updated;
-              });
-            },
-          ),
+          _buildTabContent('Potencjalne Koalicje'),
+          _buildElectionCalculatorTab(),
           _buildTabContent('Korelacje Wyborcze'),
           _buildTabContent('Prawo Benforda'),
         ],
       ),
     );
   }
+
+  /// Zakładka "Kalkulator Wyborczy" z dwoma podzakładkami: "Własne" i "Rzeczywiste"
+  Widget _buildElectionCalculatorTab() {
+    return DefaultTabController(
+      length: 2, // Dwie podzakładki
+      child: Column(
+        children: [
+          const TabBar(
+            labelColor: Colors.red,
+            tabs: [
+              Tab(text: "Własne"),
+              Tab(text: "Rzeczywiste"),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                // 1) WŁASNE – nasz dotychczasowy widget
+                ElectionCalculatorTab(
+                  dataJson: dataJson,
+                  votesJson: votesJson,
+                  onDataJsonChanged: (updated) {
+                    setState(() {
+                      dataJson = updated;
+                    });
+                  },
+                  onVotesJsonChanged: (updated) {
+                    setState(() {
+                      votesJson = updated;
+                    });
+                  },
+                ),
+
+                // 2) RZECZYWISTE – wczytuje dane z CSV i wyświetla
+                const RealElectionCalculatorTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/// Zakładka z kalkulatorem wyborczym
+/// ----------------------------------------------------------
+/// Widget `ElectionCalculatorTab` ("Własne" dane użytkownika)
+/// ----------------------------------------------------------
 class ElectionCalculatorTab extends StatefulWidget {
   final Map<String, dynamic> dataJson;
   final Map<String, dynamic> votesJson;
@@ -897,30 +869,27 @@ class ElectionCalculatorTab extends StatefulWidget {
 }
 
 class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
-  String _type = "ilościowy"; // Opcje: "ilościowy" lub "procentowy"
-  String _method = "d'Hondta";
+  String _type = "ilościowy"; // "ilościowy" lub "procentowy"
+  String _method = "d'Hondt";
   late String _selectedDistrict;
 
-  // Pola tymczasowe do UI, wczytywane z dataJson/votesJson.
-  double _pis = 0.0,
-      _ko = 0.0,
-      _td = 0.0,
-      _lewica = 0.0,
-      _konf = 0.0,
-      _frequency = 0.0;
+  double _pis = 0.0;
+  double _ko = 0.0;
+  double _td = 0.0;
+  double _lewica = 0.0;
+  double _konfederacja = 0.0;
+  double _frequency = 0.0;
   int _seatsNum = 0;
 
-  // Przechowujemy wynik kalkulacji
   Map<String, int> _resultSeats = {};
 
-  // Kontrolery do textFieldów (dzięki nim wartości w polach są zawsze aktualne)
-  late TextEditingController _pisController,
-      _koController,
-      _tdController,
-      _lewicaController,
-      _konfController,
-      _frequencyController,
-      _seatsController;
+  late TextEditingController _pisController;
+  late TextEditingController _koController;
+  late TextEditingController _tdController;
+  late TextEditingController _lewicaController;
+  late TextEditingController _konfController;
+  late TextEditingController _frequencyController;
+  late TextEditingController _seatsController;
 
   @override
   void initState() {
@@ -928,7 +897,6 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     _selectedDistrict = widget.dataJson.keys.first;
     _loadDistrictValues(_selectedDistrict);
 
-    // Inicjalizacja kontrolerów
     _pisController = TextEditingController();
     _koController = TextEditingController();
     _tdController = TextEditingController();
@@ -937,7 +905,6 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     _frequencyController = TextEditingController();
     _seatsController = TextEditingController();
 
-    // Ustawiamy wartości początkowe
     _setControllersValues();
   }
 
@@ -953,47 +920,180 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     super.dispose();
   }
 
-  /// Ładuje wartości z widget.dataJson i widget.votesJson do pól tymczasowych
   void _loadDistrictValues(String district) {
     final distData = widget.dataJson[district];
     final distVotes = widget.votesJson[district];
     if (distData != null && distVotes != null) {
-      _pis = distVotes["PiS"]?.toDouble() ?? 0.0;
-      _ko = distVotes["KO"]?.toDouble() ?? 0.0;
-      _td = distVotes["Trzecia Droga"]?.toDouble() ?? 0.0;
-      _lewica = distVotes["Lewica"]?.toDouble() ?? 0.0;
-      _konf = distVotes["Konfederacja"]?.toDouble() ?? 0.0;
+      _pis = (distVotes["PiS"] as num?)?.toDouble() ?? 0.0;
+      _ko = (distVotes["KO"] as num?)?.toDouble() ?? 0.0;
+      _td = (distVotes["Trzecia Droga"] as num?)?.toDouble() ?? 0.0;
+      _lewica = (distVotes["Lewica"] as num?)?.toDouble() ?? 0.0;
+      _konfederacja = (distVotes["Konfederacja"] as num?)?.toDouble() ?? 0.0;
 
-      _frequency = distData["Frekwencja"]?.toDouble() ?? 0.0;
+      _frequency = (distData["Frekwencja"] as num?)?.toDouble() ?? 0.0;
       _seatsNum = distData["Miejsca do zdobycia"] ?? 0;
     }
   }
 
-  /// Aktualizuje wartości w polach tekstowych
   void _setControllersValues() {
     _pisController.text = _pis == 0.0 ? '' : _pis.toString();
     _koController.text = _ko == 0.0 ? '' : _ko.toString();
     _tdController.text = _td == 0.0 ? '' : _td.toString();
     _lewicaController.text = _lewica == 0.0 ? '' : _lewica.toString();
-    _konfController.text = _konf == 0.0 ? '' : _konf.toString();
+    _konfController.text = _konfederacja == 0.0 ? '' : _konfederacja.toString();
     _frequencyController.text = _frequency == 0.0 ? '' : _frequency.toString();
     _seatsController.text = _seatsNum == 0 ? '' : _seatsNum.toString();
   }
 
-  /// Zapamiętuje wartości w polach tymczasowych (z kontrolerów)
   void _updateTempValuesFromControllers() {
     _pis = _parseDouble(_pisController.text);
     _ko = _parseDouble(_koController.text);
     _td = _parseDouble(_tdController.text);
     _lewica = _parseDouble(_lewicaController.text);
-    _konf = _parseDouble(_konfController.text);
+    _konfederacja = _parseDouble(_konfController.text);
     _frequency = _parseDouble(_frequencyController.text);
     _seatsNum = int.tryParse(_seatsController.text) ?? 0;
   }
 
-  /// Pomocnicza funkcja parsująca double z ewentualną zamianą przecinka na kropkę
   double _parseDouble(String val) {
     return double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
+  }
+
+  void _calculateSeats() {
+    // Wczytujemy najpierw wartości z pól
+    _updateTempValuesFromControllers();
+
+    if (_seatsNum <= 0) {
+      _showErrorDialog("Liczba mandatów musi być większa niż 0.");
+      return;
+    }
+
+    // sprawdzamy, czy łączne głosy > 0
+    final sumVotes = _pis + _ko + _td + _lewica + _konfederacja;
+    if (sumVotes == 0) {
+      _showErrorDialog("Wprowadź co najmniej jedną partię z głosami > 0.");
+      return;
+    }
+
+    // jeśli tryb procentowy, to suma procentów powinna = 100
+    if (_type == "procentowy") {
+      if ((sumVotes - 100.0).abs() > 0.0001) {
+        _showErrorDialog(
+            "Suma procentów musi wynosić dokładnie 100% (obecnie: $sumVotes).");
+        return;
+      }
+    }
+
+    // Obliczamy rzeczywistą liczbę głosów
+    double totalVotes = _frequency; // w procentowym = to, co wpisał user
+    double actualPis = _type == "procentowy" ? (_pis / 100) * totalVotes : _pis;
+    double actualKo = _type == "procentowy" ? (_ko / 100) * totalVotes : _ko;
+    double actualTd = _type == "procentowy" ? (_td / 100) * totalVotes : _td;
+    double actualLewica =
+        _type == "procentowy" ? (_lewica / 100) * totalVotes : _lewica;
+    double actualKonf = _type == "procentowy"
+        ? (_konfederacja / 100) * totalVotes
+        : _konfederacja;
+
+    // Zapisz do map
+    widget.votesJson[_selectedDistrict]["PiS"] = actualPis;
+    widget.votesJson[_selectedDistrict]["KO"] = actualKo;
+    widget.votesJson[_selectedDistrict]["Trzecia Droga"] = actualTd;
+    widget.votesJson[_selectedDistrict]["Lewica"] = actualLewica;
+    widget.votesJson[_selectedDistrict]["Konfederacja"] = actualKonf;
+
+    widget.dataJson[_selectedDistrict]["Frekwencja"] = _frequency;
+    widget.dataJson[_selectedDistrict]["Miejsca do zdobycia"] = _seatsNum;
+
+    widget.onVotesJsonChanged(widget.votesJson);
+    widget.onDataJsonChanged(widget.dataJson);
+
+    // WOŁAMY NOWĄ METODĘ:
+    final result = SeatsCalculator.chooseMethods(
+      PiS: actualPis,
+      KO: actualKo,
+      TD: actualTd,
+      Lewica: actualLewica,
+      Konfederacja: actualKonf,
+      Freq: actualPis + actualKo + actualTd + actualLewica + actualKonf,
+      seatsNum: _seatsNum,
+      method: _method,
+    );
+
+    // result to lista 3 elementów: [Map<String,int>, Set<String>, Set<String>]
+    final seatsMap = result[0] as Map<String, int>;
+    final differencesNext = result[1] as Set<String>;
+    final differencesPrev = result[2] as Set<String>;
+
+    setState(() {
+      _resultSeats = seatsMap;
+    });
+
+    // Wyświetl w dialogu
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Wynik podziału mandatów"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final e in seatsMap.entries)
+                  Text("${e.key}: ${e.value} mandatów"),
+                if (differencesNext.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    "Przy (+1) mandacie zmieniłby się przydział dla: ${differencesNext.join(", ")}",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+                if (differencesPrev.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    "Przy (-1) mandacie zmieniłby się przydział dla: ${differencesPrev.join(", ")}",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Błąd"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNumberField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return TextField(
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
+      controller: controller,
+    );
   }
 
   @override
@@ -1003,7 +1103,6 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Dropdown z wyborem okręgu
           const Text('Wybierz okręg:',
               style: TextStyle(fontWeight: FontWeight.bold)),
           DropdownButton<String>(
@@ -1025,8 +1124,6 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
             },
           ),
           const Divider(),
-
-          // Dropdown do wyboru typu głosów
           const Text('Rodzaj głosów:',
               style: TextStyle(fontWeight: FontWeight.bold)),
           DropdownButton<String>(
@@ -1050,8 +1147,6 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
             },
           ),
           const Divider(),
-
-          // Pola do wprowadzania głosów
           _buildNumberField(
             label: 'PiS (${_type == "procentowy" ? "%" : "głosów"})',
             controller: _pisController,
@@ -1072,32 +1167,23 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
             label: 'Konfederacja (${_type == "procentowy" ? "%" : "głosów"})',
             controller: _konfController,
           ),
-
-          // Frekwencja
           _buildNumberField(
-            label: 'Frekwencja (${_type == "procentowy" ? "%" : "głosów"})',
+            label: 'Frekwencja (%)',
             controller: _frequencyController,
           ),
-
-          // Liczba miejsc
           TextField(
             keyboardType: TextInputType.number,
             decoration:
                 const InputDecoration(labelText: 'Liczba mandatów w okręgu'),
             controller: _seatsController,
           ),
-
           const SizedBox(height: 16),
-
-          // Metoda podziału:
-          const Text(
-            'Wybierz metodę:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text('Wybierz metodę:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           DropdownButton<String>(
             value: _method,
             items: [
-              "d'Hondta",
+              "d'Hondt",
               "Sainte-Laguë",
               "Kwota Hare’a (metoda największych reszt)",
               "Kwota Hare’a (metoda najmniejszych reszt)",
@@ -1115,124 +1201,233 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
               }
             },
           ),
-
           const SizedBox(height: 16),
-
-          // Przycisk obliczania
           ElevatedButton(
             onPressed: _calculateSeats,
             child: const Text('Oblicz podział mandatów'),
           ),
-
           const SizedBox(height: 16),
-
-          // Wyświetlanie wyniku
-          const Text(
-            'Wynik podziału mandatów:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text('Wynik podziału mandatów:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           if (_resultSeats.isNotEmpty)
-            ..._resultSeats.entries.map((e) {
-              return Text('${e.key}: ${e.value}');
-            }),
-
+            ..._resultSeats.entries.map((e) => Text('${e.key}: ${e.value}')),
           const SizedBox(height: 100),
         ],
       ),
     );
   }
+}
 
-  /// Funkcja obliczająca podział mandatów
-  void _calculateSeats() {
-    // Najpierw wczytujemy aktualne wartości z kontrolerów
-    _updateTempValuesFromControllers();
+/// ----------------------------------------------------------
+/// Widget "Rzeczywiste" – wczytuje dane z CSV
+/// ----------------------------------------------------------
+class RealElectionCalculatorTab extends StatefulWidget {
+  const RealElectionCalculatorTab({Key? key}) : super(key: key);
 
-    // Sprawdzenie poprawności danych w przypadku procentów
-    if (_type == "procentowy") {
-      double totalPercentage = _pis + _ko + _td + _lewica + _konf;
-      if (totalPercentage > 100.0) {
-        _showErrorDialog("Suma procentów przekracza 100%.");
-        return;
-      }
-      // Można też sprawdzać czy sumy < 100% itp.
+  @override
+  _RealElectionCalculatorTabState createState() =>
+      _RealElectionCalculatorTabState();
+}
+
+class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
+  final List<int> _availableYears = [2001, 2005, 2007, 2011, 2015, 2019];
+  int? _selectedYear;
+  double _threshold = 5.0;
+  double _thresholdCoalition = 8.0;
+
+  List<String> _possibleParties = [];
+  List<String> _exemptedParties = [];
+  List<List<dynamic>> _csvRaw = [];
+  Map<String, Map<String, int>> _results = {};
+
+  /// Wczytuje plik CSV dla wybranego roku
+  Future<void> _loadCsv() async {
+    if (_selectedYear == null) return;
+
+    String filename =
+        'wyniki_gl_na_listy_po_okregach_sejm_utf8_$_selectedYear.csv';
+
+    try {
+      final rawString = await rootBundle.loadString('Data/$filename');
+      List<List<dynamic>> listData = const csv.CsvToListConverter().convert(
+        rawString,
+        fieldDelimiter: _selectedYear! < 2015 ? ',' : ';',
+      );
+
+      setState(() {
+        _csvRaw = listData;
+        _possibleParties = _csvRaw.isNotEmpty
+            ? _csvRaw.first
+                .map((e) => e.toString())
+                .where((header) =>
+                    header.contains("Komitet") || header.contains("KOMITET"))
+                .toList()
+            : [];
+        _exemptedParties.clear();
+      });
+    } catch (e) {
+      print("Błąd wczytywania CSV: $e");
     }
+  }
 
-    // Przekształcenie procentów na głosy, jeśli wybrano opcję procentową
-    // (interpretujemy _frequency jako łączną liczbę głosów?)
-    double totalVotes = _frequency;
-    double actualPis = _type == "procentowy" ? (_pis / 100) * totalVotes : _pis;
-    double actualKo = _type == "procentowy" ? (_ko / 100) * totalVotes : _ko;
-    double actualTd = _type == "procentowy" ? (_td / 100) * totalVotes : _td;
-    double actualLewica =
-        _type == "procentowy" ? (_lewica / 100) * totalVotes : _lewica;
-    double actualKonf =
-        _type == "procentowy" ? (_konf / 100) * totalVotes : _konf;
+  void _calculateResults() {
+    if (_csvRaw.isEmpty || _selectedYear == null) return;
 
-    // Zaktualizuj głosy i frekwencję w oryginalnych mapach
-    widget.votesJson[_selectedDistrict]["PiS"] = actualPis;
-    widget.votesJson[_selectedDistrict]["KO"] = actualKo;
-    widget.votesJson[_selectedDistrict]["Trzecia Droga"] = actualTd;
-    widget.votesJson[_selectedDistrict]["Lewica"] = actualLewica;
-    widget.votesJson[_selectedDistrict]["Konfederacja"] = actualKonf;
+    final csvData = _csvRaw
+        .skip(1) // pomijamy nagłówek
+        .map((row) {
+      final rowMap = <String, double>{};
+      for (int i = 0; i < _csvRaw.first.length; i++) {
+        final header = _csvRaw.first[i].toString();
+        if (row.length > i && double.tryParse(row[i].toString()) != null) {
+          rowMap[header] = double.parse(row[i].toString());
+        }
+      }
+      return CsvRow(rowMap);
+    }).toList();
 
-    widget.dataJson[_selectedDistrict]["Frekwencja"] = _frequency;
-    widget.dataJson[_selectedDistrict]["Miejsca do zdobycia"] = _seatsNum;
+    final calculation = ElectionCalc.calculateVotesFromCsv(
+      csvData: csvData,
+      threshold: _threshold,
+      coalitionThreshold: _thresholdCoalition,
+      exemptedParties: _exemptedParties,
+    );
 
-    // Wywołaj callbacki, aby przekazać zmiany wyżej (np. do View3)
-    widget.onVotesJsonChanged(widget.votesJson);
-    widget.onDataJsonChanged(widget.dataJson);
+    final allVotes = calculation["allVotes"] as double;
+    final qualifiedParties = calculation["qualifiedParties"] as List<String>;
+    final receivedVotes = calculation["receivedVotes"] as List<double>;
 
-    // Oblicz mandaty
-    final result = SeatsCalculatorSingleDistrict.chooseMethods(
-      PiS: actualPis,
-      KO: actualKo,
-      TD: actualTd,
-      Lewica: actualLewica,
-      Konf: actualKonf,
-      Freq: _frequency,
-      method: _method,
-      seatsNum: _seatsNum,
+    // Liczymy 460 mandatów
+    final seatsResults = ElectionCalc.chooseMethod(
+      qualifiedDictionary: qualifiedParties,
+      numberOfVotes: receivedVotes,
+      year: _selectedYear.toString(),
+      seatsNum: 460,
     );
 
     setState(() {
-      _resultSeats = {};
-      if (result.containsKey("recivedVotes")) {
-        // Wyświetlamy co zwrócił kalkulator
-        _resultSeats = Map<String, int>.from(result["recivedVotes"]);
-      }
+      _results = seatsResults;
     });
   }
 
-  /// Wyświetla dialog błędu
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Błąd"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("OK"),
+  Widget _buildResultsTable() {
+    if (_results.isEmpty) {
+      return const Text(
+        "Brak wyników. Wypełnij dane i kliknij 'Oblicz'.",
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    final List<String> methods = _results.keys.toList();
+    final List<String> parties = _results[methods.first]!.keys.toList();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: [
+          const DataColumn(label: Text("Metoda")),
+          ...parties.map((party) => DataColumn(label: Text(party))),
+        ],
+        rows: methods.map((method) {
+          return DataRow(cells: [
+            DataCell(Text(method)),
+            ...parties.map((party) {
+              return DataCell(Text(_results[method]![party].toString()));
+            }).toList(),
+          ]);
+        }).toList(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Wybierz rok:",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          DropdownButton<int>(
+            value: _selectedYear,
+            hint: const Text("Wybierz rok"),
+            items: _availableYears.map((y) {
+              return DropdownMenuItem<int>(
+                value: y,
+                child: Text(y.toString()),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                _selectedYear = val;
+                if (val != null) _loadCsv();
+              });
+            },
           ),
+          const SizedBox(height: 16),
+          const Text("Próg wyborczy (%)",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          TextField(
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: "np. 5.0"),
+            onChanged: (val) {
+              final d = double.tryParse(val.replaceAll(',', '.'));
+              if (d != null) setState(() => _threshold = d);
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text("Próg dla koalicji (%)",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          TextField(
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: "np. 8.0"),
+            onChanged: (val) {
+              final d = double.tryParse(val.replaceAll(',', '.'));
+              if (d != null) setState(() => _thresholdCoalition = d);
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text("Partie zwolnione z progu (opcjonalne):",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          _buildExemptedPartiesWidget(),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _calculateResults,
+            child: const Text("Oblicz"),
+          ),
+          const SizedBox(height: 20),
+          _buildResultsTable(),
         ],
       ),
     );
   }
 
-  /// Pomocnicze pole do wprowadzania wartości double
-  Widget _buildNumberField({
-    required String label,
-    required TextEditingController controller,
-  }) {
-    return TextField(
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label),
-      controller: controller,
-      onChanged: (val) {
-        // Można dodatkowo wymusić odświeżenie stanu itp.
-        // setState(() {});
-      },
+  Widget _buildExemptedPartiesWidget() {
+    if (_possibleParties.isEmpty) {
+      return const Text("Brak dostępnych partii. Wczytaj plik CSV.");
+    }
+
+    return Column(
+      children: _possibleParties.map((partyName) {
+        return Row(
+          children: [
+            Checkbox(
+              value: _exemptedParties.contains(partyName),
+              onChanged: (checked) {
+                setState(() {
+                  if (checked == true) {
+                    _exemptedParties.add(partyName);
+                  } else {
+                    _exemptedParties.remove(partyName);
+                  }
+                });
+              },
+            ),
+            Expanded(child: Text(partyName)),
+          ],
+        );
+      }).toList(),
     );
   }
 }
