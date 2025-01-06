@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // Upewnij się, że import jest zgodny z Twoją strukturą katalogów:
 import '../controllers/seatsCalculator.dart';
-
+import '../api_wrappers/clubs.dart';
 class View3 extends StatefulWidget {
   const View3({Key? key}) : super(key: key);
 
@@ -11,6 +11,10 @@ class View3 extends StatefulWidget {
 
 class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int termNumber = 10;
+  List<dynamic> coalitions = [];
+
+
 
   Map<String, dynamic> dataJson = {
     "Legnica": {
@@ -719,6 +723,13 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadCoalitions();
+  }
+  void _loadCoalitions() async {
+    List<dynamic> fetchedCoalitions = await findMinimalCoalitions(termNumber);
+    setState(() {
+      coalitions = fetchedCoalitions;
+    });
   }
 
   @override
@@ -733,6 +744,61 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       child: Text('$title content here', style: const TextStyle(fontSize: 14)),
     );
   }
+
+  Widget _buildPotentialCoalitionTab() {
+    if (coalitions.isEmpty) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Text('Potencjalne Koalicje', style: TextStyle(fontSize: 24)),
+        Expanded(
+          child: ListView.builder(
+            itemCount: coalitions.length,
+            itemBuilder: (context, index) {
+              var coalition = coalitions[index];
+              var totalMPs = coalition.fold(0, (sum, club) => sum + club['membersCount']);
+              var clubs = coalition.map((club) => club['id']).join(', ');
+
+              return ListTile(
+                title: Text('Koalicja ${index + 1}'),
+                subtitle: Text('Łączna ilość posłów: $totalMPs\nKluby: $clubs'),
+                onTap: () => _showCoalitionDetails(context, coalition),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCoalitionDetails(BuildContext context, List<dynamic> coalition) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Szczegóły Koalicji'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: coalition.map((club) {
+              return ListTile(
+                title: Text(club['id']),
+                subtitle: Text('Posłów: ${club['membersCount']}'),
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Zamknij'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -788,7 +854,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildTabContent('Potencjalne Koalicje'),
+          _buildPotentialCoalitionTab(),
           ElectionCalculatorTab(
             dataJson: dataJson,
             votesJson: votesJson,
