@@ -12,7 +12,7 @@ class View2 extends StatefulWidget {
 class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final InterpelationController _interpelationController =
       InterpelationController(); // Kontroler do obsługi API
-  TextEditingController _interpelationController2 = TextEditingController();
+  final TextEditingController _interpelationController2 = TextEditingController();
 
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
@@ -581,6 +581,17 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                     });
                     fetchCommittees();
                   },
+
+                  child: Container(
+                    width: 70,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, color: Colors.white),
+                  ),
 
                 ),
                 const SizedBox(width: 8),
