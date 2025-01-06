@@ -1005,9 +1005,11 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
               ],
             ),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: fetchMps,
-              child: Text('Pobierz posłów'),
+            Center(
+              child: ElevatedButton(
+                onPressed: fetchMps,
+                child: Text('Pobierz posłów'),
+              ),
             ),
             SizedBox(height: 16),
             _isLoading
