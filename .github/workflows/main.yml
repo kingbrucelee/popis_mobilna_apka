@@ -15,15 +15,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up Flutter
+      # Step 2: Download and set up Flutter
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.13.6' # Ensure this version or higher
-          channel: stable # Use stable channel
+        run: |
+          # Download Flutter SDK
+          curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.13.6-stable.tar.xz
+          tar xf flutter.tar.xz
+          export PATH="$PWD/flutter/bin:$PATH"
+          
+          # Verify Flutter and Dart versions
+          flutter --version
+          dart --version
 
-      # Step 3: Disable Flutter Telemetry
-      - name: Disable Flutter Telemetry
+      # Step 3: Disable Flutter telemetry (optional)
+      - name: Disable Flutter telemetry
         run: flutter config --no-analytics
 
       # Step 4: Install dependencies
