@@ -1,0 +1,32 @@
+name: Build and distribute
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: cedvdb/action-flutter-build-android@v1
+        with:
+          build-cmd: flutter build apk --debug
+          working-directory: ./
+          
+      - name: Generate Release Version
+        id: version
+        run: echo "version=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: build/app/outputs/flutter-apk/app-debug.apk
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
