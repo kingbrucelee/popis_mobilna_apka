@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import '../controllers/seatsCalculator.dart';
 import '../controllers/electionCalc.dart';
+import '../api_wrappers/clubs.dart';
 
 /// Główny widget ekranu z zakładkami
 class View3 extends StatefulWidget {
@@ -18,6 +19,65 @@ class View3 extends StatefulWidget {
 
 class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int termNumber = 10;
+  List<dynamic> coalitions = [];
+
+  Widget _buildPotentialCoalitionTab() {
+    if (coalitions.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Column(
+      children: [
+        const Text(
+          'Potencjalne Koalicje',
+          style: TextStyle(fontSize: 24),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: coalitions.length,
+            itemBuilder: (context, index) {
+              var coalition = coalitions[index];
+              var totalMPs =
+                  coalition.fold(0, (sum, club) => sum + club['membersCount']);
+              var clubs = coalition.map((club) => club['id']).join(', ');
+              return ListTile(
+                title: Text('Koalicja ${index + 1}'),
+                subtitle:
+                    Text('Łączna liczba posłów: $totalMPs\nKluby: $clubs'),
+                onTap: () => _showCoalitionDetails(context, coalition),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCoalitionDetails(BuildContext context, List<dynamic> coalition) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Szczegóły Koalicji'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: coalition.map((club) {
+              return ListTile(
+                title: Text(club['id']),
+                subtitle: Text('Posłów: ${club['membersCount']}'),
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Zamknij'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // -------------------------------------------------------
   // Dane testowe "dataJson" i "votesJson" (dla zakładki "Własne")
@@ -730,6 +790,14 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadCoalitions();
+  }
+
+  void _loadCoalitions() async {
+    List<dynamic> fetchedCoalitions = await findMinimalCoalitions(termNumber);
+    setState(() {
+      coalitions = fetchedCoalitions;
+    });
   }
 
   @override
@@ -799,7 +867,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildTabContent('Potencjalne Koalicje'),
+          _buildPotentialCoalitionTab(),
           _buildElectionCalculatorTab(),
           _buildTabContent('Korelacje Wyborcze'),
           _buildTabContent('Prawo Benforda'),
@@ -1053,7 +1121,7 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   Widget _buildResultsTable() {
     if (_resultSeats.isEmpty) {
       return const Text(
-        "Brak wyników. Wprowadź dane i oblicz podział mandatów.",
+        "",
         style: TextStyle(color: Colors.grey),
       );
     }
@@ -1276,7 +1344,7 @@ class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
               style: TextStyle(fontWeight: FontWeight.bold)),
           TextField(
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: "np. 5.0"),
+            decoration: const InputDecoration(hintText: ""),
             onChanged: (val) {
               final d = double.tryParse(val.replaceAll(',', '.'));
               if (d != null) setState(() => _threshold = d);
@@ -1287,7 +1355,7 @@ class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
               style: TextStyle(fontWeight: FontWeight.bold)),
           TextField(
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: "np. 8.0"),
+            decoration: const InputDecoration(hintText: ""),
             onChanged: (val) {
               final d = double.tryParse(val.replaceAll(',', '.'));
               if (d != null) setState(() => _thresholdCoalition = d);
@@ -1444,7 +1512,7 @@ class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
   Widget _buildResultsTable() {
     if (_results.isEmpty) {
       return const Text(
-        "Brak wyników (sprawdź czy kolumna 'Okręg' istnieje, czy seatsPerDistrict ma odpowiednie klucze, itp.)",
+        "",
         style: TextStyle(color: Colors.grey),
       );
     }
@@ -1491,7 +1559,7 @@ class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
   /// Checkboxy do zwolnienia partii z progu
   Widget _buildExemptedPartiesWidget() {
     if (_possibleParties.isEmpty) {
-      return const Text("Brak partii. Najpierw wczytaj plik CSV.");
+      return const Text("");
     }
 
     return Column(
