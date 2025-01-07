@@ -1,16 +1,11 @@
-// controllers/seatsCalculator.dart
-
 import 'package:flutter/foundation.dart';
-import 'electionCalc.dart';
-import 'electionCalc.dart' show CsvRow;
+import 'electionCalc.dart' show CsvRow, ElectionCalc;
 
-/// Klasa SeatsCalculator – front do obliczeń z ElectionCalc
 class SeatsCalculator {
-  /// Metoda do obliczania głosów z CSV (na potrzeby "Rzeczywiste") – zostaje po staremu
+  /// Metoda do obliczania głosów z CSV (na potrzeby "Rzeczywiste")
   static Map<String, dynamic> calculateVotes({
     required double votesNeeded,
     required double votesNeededForCoalition,
-    required String year,
     required List<CsvRow> csvData,
     List<String> exemptedParties = const [],
   }) {
@@ -22,54 +17,35 @@ class SeatsCalculator {
     );
   }
 
-  /// Metoda do wyboru metod *dla 4 typów naraz* – zostawiamy starą
-  /// Zwraca strukturę:
-  /// {
-  ///   "d'Hondt": {"PiS": X, "KO": Y, ...},
-  ///   "Sainte-Laguë": {...},
-  ///   ...
-  /// }
+  /// Liczy 4 metody naraz (bez podziału na okręgi – wszystko w jednym worku).
   static Map<String, Map<String, int>> chooseMethodAll({
     required double PiS,
     required double KO,
     required double TD,
     required double Lewica,
     required double Konfederacja,
-    required double Freq,
     required int seatsNum,
   }) {
-    // Słownik partii
-    List<String> qualifiedDictionary = [
+    final qualifiedDictionary = <String>[
       "PiS",
       "KO",
       "Trzecia Droga",
       "Lewica",
       "Konfederacja",
     ];
+    final numberOfVotes = <double>[PiS, KO, TD, Lewica, Konfederacja];
 
-    // Odpowiednie głosy
-    List<double> numberOfVotes = [
-      PiS,
-      KO,
-      TD,
-      Lewica,
-      Konfederacja,
-    ];
-
-    // Liczymy 4 metody jednocześnie
     final allResults = ElectionCalc.chooseMethod(
       qualifiedDictionary: qualifiedDictionary,
       numberOfVotes: numberOfVotes,
-      year: '2020',
+      year: '', // tu ewentualnie np. "2023"
       seatsNum: seatsNum,
     );
-
     return allResults;
   }
 
-  /// NOWA METODA – do wyboru *pojedynczej* metody i otrzymania [MapMandatów, nextDiff, prevDiff].
-  ///
-  /// Wewnętrznie woła "specialChooseMethod" z electionCalc.dart.
+  /// NOWA METODA – analog "chooseMethods" do wywołania *pojedynczej* metody.
+  /// Zwraca: [mapMandatów, nextDiff, prevDiff].
   static List<dynamic> chooseMethods({
     required double PiS,
     required double KO,
@@ -80,8 +56,7 @@ class SeatsCalculator {
     required int seatsNum,
     required String method,
   }) {
-    // Budujemy mapę głosów
-    Map<String, double> voteDict = {
+    final voteDict = <String, double>{
       "PiS": PiS,
       "KO": KO,
       "Trzecia Droga": TD,
@@ -89,7 +64,7 @@ class SeatsCalculator {
       "Konfederacja": Konfederacja,
     };
 
-    // Wywołujemy specialChooseMethod
+    // Korzystamy z "specialChooseMethod" z `electionCalc.dart`
     final result = ElectionCalc.specialChooseMethod(
       voteDict: voteDict,
       seatsNum: seatsNum,
@@ -97,5 +72,20 @@ class SeatsCalculator {
       freq: Freq,
     );
     return result; // [mapSeats, differencesNext, differencesPrev]
+  }
+
+  /// Przykład nowej metody liczącej PO OKRĘGACH, analogicznie do Pythona:
+  static Map<String, Map<String, int>> chooseMethodByAllDistricts({
+    required List<String> qualifiedParties,
+    required List<CsvRow> csvData,
+    required List<int> seatsPerDistrict,
+    required String year,
+  }) {
+    return ElectionCalc.chooseMethodByDistricts(
+      csvData: csvData,
+      qualifiedParties: qualifiedParties,
+      seatsPerDistrict: seatsPerDistrict,
+      year: year,
+    );
   }
 }
