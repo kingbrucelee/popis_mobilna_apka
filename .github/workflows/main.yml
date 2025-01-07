@@ -11,23 +11,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Set up Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.6'
+          flutter-version: '3.13.6' # Ensure this version or higher
+          channel: stable # Use stable channel
 
+      # Step 3: Disable Flutter Telemetry
       - name: Disable Flutter Telemetry
         run: flutter config --no-analytics
 
+      # Step 4: Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
+      # Step 5: Build APK
       - name: Build APK
         run: flutter build apk --debug
 
+      # Step 6: Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
