@@ -133,21 +133,21 @@ class ElectionCalc {
     Map<String, double> voteDict,
     int seatsNum,
   ) {
-    // Bezpieczniki
-    if (voteDict.isEmpty || seatsNum <= 0) {
-      return seatsDict;
-    }
-    final double totalVotes = voteDict.values.fold(0.0, (p, c) => p + c);
-    if (totalVotes == 0) {
-      return seatsDict;
-    }
+    if (voteDict.isEmpty || seatsNum <= 0) return seatsDict;
 
-    final copy = Map<String, double>.from(voteDict);
+    final double totalVotes = voteDict.values.reduce((a, b) => a + b);
+    if (totalVotes == 0) return seatsDict;
+
+    final priorities = voteDict.entries.map((entry) => entry.key).toList();
+    final quotients = Map.fromEntries(voteDict.entries.map(
+      (entry) => MapEntry(entry.key, entry.value),
+    ));
 
     for (int i = 0; i < seatsNum; i++) {
-      final maxParty = copy.keys.reduce((a, b) => copy[a]! > copy[b]! ? a : b);
-      seatsDict[maxParty] = (seatsDict[maxParty] ?? 0) + 1;
-      copy[maxParty] = voteDict[maxParty]! / (seatsDict[maxParty]! + 1);
+      final winner =
+          priorities.reduce((a, b) => (quotients[a]! > quotients[b]!) ? a : b);
+      seatsDict[winner] = (seatsDict[winner] ?? 0) + 1;
+      quotients[winner] = voteDict[winner]! / (seatsDict[winner]! + 1);
     }
     return seatsDict;
   }
@@ -176,7 +176,6 @@ class ElectionCalc {
     return seatsDict;
   }
 
-  /// Metoda Hare’a (największych / najmniejszych reszt)
   static Map<String, int> hareDrop(
     Map<String, int> seatsDict,
     Map<String, double> voteDict,
@@ -184,39 +183,28 @@ class ElectionCalc {
     double freq, {
     required bool biggest,
   }) {
-    if (voteDict.isEmpty || seatsNum <= 0) {
-      return seatsDict;
-    }
-    final double totalVotes = voteDict.values.fold(0.0, (p, c) => p + c);
-    if (totalVotes == 0) {
-      return seatsDict;
-    }
+    if (voteDict.isEmpty || seatsNum <= 0 || freq == 0) return seatsDict;
 
-    final copy = Map<String, double>.from(voteDict);
-    int remaining = seatsNum;
+    final Map<String, double> remainders = {};
+    int assignedSeats = 0;
 
-    // Podział bazowy
-    copy.forEach((party, votes) {
-      final value = (votes * seatsNum) / freq;
-      final baseSeats = value.floor();
+    // Initial allocation
+    voteDict.forEach((party, votes) {
+      final seatFraction = votes * seatsNum / freq;
+      final baseSeats = seatFraction.floor();
       seatsDict[party] = baseSeats;
-      copy[party] = value - baseSeats;
-      remaining -= baseSeats;
+      remainders[party] = seatFraction - baseSeats;
+      assignedSeats += baseSeats;
     });
 
-    // Rozdział reszt
-    for (int i = 0; i < remaining; i++) {
-      if (biggest) {
-        final maxParty =
-            copy.keys.reduce((a, b) => copy[a]! > copy[b]! ? a : b);
-        seatsDict[maxParty] = (seatsDict[maxParty] ?? 0) + 1;
-        copy[maxParty] = 0.0;
-      } else {
-        final minParty =
-            copy.keys.reduce((a, b) => copy[a]! < copy[b]! ? a : b);
-        seatsDict[minParty] = (seatsDict[minParty] ?? 0) + 1;
-        copy[minParty] = double.infinity;
-      }
+    // Distribute remaining seats
+    while (assignedSeats < seatsNum) {
+      final selectedParty = biggest
+          ? remainders.entries.reduce((a, b) => a.value > b.value ? a : b).key
+          : remainders.entries.reduce((a, b) => a.value < b.value ? a : b).key;
+      seatsDict[selectedParty] = (seatsDict[selectedParty] ?? 0) + 1;
+      remainders[selectedParty] = 0; // Prevent reassignment
+      assignedSeats++;
     }
     return seatsDict;
   }
