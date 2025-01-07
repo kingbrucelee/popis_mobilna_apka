@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Download and set up Flutter
+      # Step 2: Set up Flutter
       - name: Set up Flutter
         run: |
           # Download Flutter SDK
@@ -23,31 +23,23 @@ jobs:
           tar xf flutter.tar.xz
           export PATH="$PWD/flutter/bin:$PATH"
 
-          # Ensure Flutter commands are available
-          echo $PATH
-          which flutter
+          # Verify installation
           flutter --version
           dart --version
 
-      # Step 3: Disable Flutter telemetry (optional)
-      - name: Disable Flutter telemetry
-        run: |
-          export PATH="$PWD/flutter/bin:$PATH"
-          flutter config --no-analytics
-
-      # Step 4: Install dependencies
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           export PATH="$PWD/flutter/bin:$PATH"
           flutter pub get
 
-      # Step 5: Build APK
+      # Step 4: Build APK
       - name: Build APK
         run: |
           export PATH="$PWD/flutter/bin:$PATH"
           flutter build apk --debug
 
-      # Step 6: Upload APK artifact
+      # Step 5: Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
