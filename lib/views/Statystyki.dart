@@ -21,6 +21,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   late MyController _controller = MyController(_model);
 
   final CommitteeService service = CommitteeService();
+  final TextEditingController _termController = TextEditingController(text: '10');
 
   int _value = 10;
   bool _isLoadingCommittees = false;
@@ -53,7 +54,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _innerTabController = TabController(length: 2, vsync: this);
-
+    _termController.text = '10';
     _loadMpsData(_poslowieTermNumber); // Załaduj posłów
     _loadCommittees(); // Automatyczne załadowanie komisji
   }
@@ -62,6 +63,8 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   void dispose() {
     _tabController.dispose();
     _innerTabController.dispose();
+    _termController.dispose();
+
     super.dispose();
   }
 
@@ -227,7 +230,6 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ... Twój niezmieniony kod do UI (kadencja, pobieranie, dropdown) ...
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -246,11 +248,16 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: TextField(
-                        controller: TextEditingController(text: '$_value'),
-                        readOnly: true,
+                        controller: _termController,
+                        keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white, fontSize: 18),
                         decoration: InputDecoration(border: InputBorder.none),
+                        onChanged: (value) {
+                          setState(() {
+                            _value = int.tryParse(value) ?? 10;
+                          });
+                        },
                       ),
                     ),
                   ),
@@ -260,8 +267,11 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          if (_value > 1) _value--;
-                          _loadCommittees();
+                          if (_value > 1) {
+                            _value--;
+                            _termController.text = _value.toString();
+                            _loadCommittees();
+                          }
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -279,6 +289,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                       onPressed: () {
                         setState(() {
                           _value++;
+                          _termController.text = _value.toString();
                           _loadCommittees();
                         });
                       },
@@ -299,45 +310,45 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                   _selectedCommittee == "Wybierz komisje")
                 Text("Nie znaleziono komisji dla kadencji $_value")
               else ...[
-                Text("Komisja, której statystyki cię interesują"),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: _selectedCommittee,
-                  items: <String>[
-                    "Wybierz komisje",
-                    ..._committees.map((c) => "${c['name']} - ${c['code']}"),
-                  ]
-                      .map((e) =>
-                          DropdownMenuItem<String>(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) async {
-                    setState(() {
-                      _selectedCommittee = val!;
-                      _committeeStats = null;
-                    });
-                    if (_selectedCommittee != "Wybierz komisje") {
-                      await _loadCommitteeStats();
-                    }
-                  },
-                ),
-                if (_selectedCommittee == "Wybierz komisje")
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child:
-                        Text("", style: TextStyle(fontStyle: FontStyle.italic)),
-                  )
-                else if (_committeeStats != null) ...[
-                  TabBar(
-                    controller: _innerTabController,
-                    labelColor: Colors.red,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: [
-                      Tab(text: "Przegląd Komisji"),
-                      Tab(text: "Statystyki Szczegółowe"),
-                    ],
+                  Text("Komisja, której statystyki cię interesują"),
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    value: _selectedCommittee,
+                    items: <String>[
+                      "Wybierz komisje",
+                      ..._committees.map((c) => "${c['name']} - ${c['code']}"),
+                    ]
+                        .map((e) =>
+                        DropdownMenuItem<String>(value: e, child: Text(e)))
+                        .toList(),
+                    onChanged: (val) async {
+                      setState(() {
+                        _selectedCommittee = val!;
+                        _committeeStats = null;
+                      });
+                      if (_selectedCommittee != "Wybierz komisje") {
+                        await _loadCommitteeStats();
+                      }
+                    },
                   ),
+                  if (_selectedCommittee == "Wybierz komisje")
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child:
+                      Text("", style: TextStyle(fontStyle: FontStyle.italic)),
+                    )
+                  else if (_committeeStats != null) ...[
+                    TabBar(
+                      controller: _innerTabController,
+                      labelColor: Colors.red,
+                      unselectedLabelColor: Colors.grey,
+                      tabs: [
+                        Tab(text: "Przegląd Komisji"),
+                        Tab(text: "Statystyki Szczegółowe"),
+                      ],
+                    ),
+                  ]
                 ]
-              ]
             ],
           ),
         ),
@@ -370,7 +381,7 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Kadencja sejmu (Posłowie)", style: TextStyle(fontSize: 18)),
+          Text("Kadencja sejmu", style: TextStyle(fontSize: 18)),
           SizedBox(height: 8),
           // ... UI do zmiany numeru kadencji ...
           Row(
@@ -383,12 +394,16 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: TextField(
-                    controller:
-                        TextEditingController(text: '$_poslowieTermNumber'),
-                    readOnly: true,
+                    controller: _termController,
+                    keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white, fontSize: 18),
                     decoration: InputDecoration(border: InputBorder.none),
+                    onChanged: (value) {
+                      setState(() {
+                        _value = int.tryParse(value) ?? 10;
+                      });
+                    },
                   ),
                 ),
               ),
@@ -398,8 +413,11 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
-                      if (_poslowieTermNumber > 1) _poslowieTermNumber--;
-                      _loadMpsData(_poslowieTermNumber);
+                      if (_value > 1) {
+                        _value--;
+                        _termController.text = _value.toString();
+                        _loadCommittees();
+                      }
                     });
                   },
                   style: ElevatedButton.styleFrom(
@@ -416,8 +434,9 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
                 child: ElevatedButton(
                   onPressed: () {
                     setState(() {
-                      _poslowieTermNumber++;
-                      _loadMpsData(_poslowieTermNumber);
+                      _value++;
+                      _termController.text = _value.toString();
+                      _loadCommittees();
                     });
                   },
                   style: ElevatedButton.styleFrom(

@@ -726,6 +726,7 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
   }
 
   @override

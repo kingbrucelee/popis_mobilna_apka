@@ -12,7 +12,9 @@ class View2 extends StatefulWidget {
 class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   final InterpelationController _interpelationController =
       InterpelationController(); // Kontroler do obsługi API
-  final TextEditingController _interpelationController2 = TextEditingController();
+  final TextEditingController _interpelationController2 = TextEditingController(text: '1');
+  final TextEditingController _termController = TextEditingController(text: '10');
+  final TextEditingController _yearController = TextEditingController(text: DateTime.now().year.toString());
 
   final CommitteeController _committeeController =
       CommitteeController(); // Tworzymy instancję dla kontrolera komisji
@@ -52,6 +54,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _termController.text = '10';
+    _yearController.text = DateTime.now().year.toString();
     // Po uruchomieniu aplikacji możesz też od razu pobrać komisje:
     fetchCommittees();
   }
@@ -59,6 +63,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _tabController.dispose();
+    _termController.dispose();
+    _yearController.dispose();
     super.dispose();
   }
 
@@ -368,7 +374,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kadencja i numer interpelacji',
+            Text('Kadencja sejmu',
                 style: TextStyle(fontSize: 18, color: Colors.black)),
             SizedBox(height: 8),
             Row(
@@ -377,17 +383,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedTerm',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _termController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -395,6 +410,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                      _termController.text = _selectedTerm.toString();
                     });
                   },
                   child: Container(
@@ -413,6 +429,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedTerm++;
+                      _termController.text = _selectedTerm.toString();
                     });
                   },
                   child: Container(
@@ -429,6 +446,9 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
               ],
             ),
             SizedBox(height: 16),
+            Text('Numer interpelacji',
+                style: TextStyle(fontSize: 18, color: Colors.black)),
+            SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
@@ -518,7 +538,6 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
     );
   }
 
-
   Widget _buildInterpelationDetails() {
     if (_interpelationDetails == null) {
       return Text('Brak szczegółów do wyświetlenia.');
@@ -559,17 +578,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedTerm',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _termController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -709,7 +737,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kadencja i procesy legislacyjne',
+            Text('Kadencja sejmu',
                 style: TextStyle(fontSize: 18, color: Colors.black)),
             SizedBox(height: 8),
             Row(
@@ -718,17 +746,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedTerm',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _termController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -736,6 +773,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedTerm = _selectedTerm > 1 ? _selectedTerm - 1 : 1;
+                      _termController.text = _selectedTerm.toString();
                       _resetLegislativeData();
                     });
                   },
@@ -755,6 +793,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedTerm++;
+                      _termController.text = _selectedTerm.toString();
                       _resetLegislativeData();
                     });
                   },
@@ -780,27 +819,27 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             _isLoading
                 ? CircularProgressIndicator()
                 : _legislativeProcesses.isEmpty
-                    ? Text('Brak dostępnych procesów legislacyjnych.')
-                    : DropdownButton<String>(
-                        isExpanded: true,
-                        value: _selectedProcess,
-                        hint: Text('Wybierz proces legislacyjny'),
-                        items: _legislativeProcesses
-                            .map((process) => DropdownMenuItem<String>(
-                                  value: process['number'],
-                                  child: Text(
-                                      '${process['number']} - ${process['title']}'),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedProcess = value;
-                          });
-                          if (value != null) {
-                            fetchProcessDetails(value);
-                          }
-                        },
-                      ),
+                ? Text('Brak dostępnych procesów legislacyjnych.')
+                : DropdownButton<String>(
+              isExpanded: true,
+              value: _selectedProcess,
+              hint: Text('Wybierz proces legislacyjny'),
+              items: _legislativeProcesses
+                  .map((process) => DropdownMenuItem<String>(
+                value: process['number'],
+                child: Text(
+                    '${process['number']} - ${process['title']}'),
+              ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedProcess = value;
+                });
+                if (value != null) {
+                  fetchProcessDetails(value);
+                }
+              },
+            ),
             SizedBox(height: 16),
             _processDetails == null
                 ? Text('Wybierz proces, aby zobaczyć szczegóły.')
@@ -815,17 +854,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedYear',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _yearController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedYear = int.tryParse(value) ?? DateTime.now().year;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -835,6 +883,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       _selectedYear = _selectedYear > 2000
                           ? _selectedYear - 1
                           : _selectedYear;
+                      _yearController.text = _selectedYear.toString();
                       _resetLatestLaws();
                     });
                   },
@@ -854,6 +903,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                   onTap: () {
                     setState(() {
                       _selectedYear++;
+                      _yearController.text = _selectedYear.toString();
                       _resetLatestLaws();
                     });
                   },
@@ -879,16 +929,16 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             _isLoading
                 ? CircularProgressIndicator()
                 : _latestLaws.isEmpty
-                    ? Text('Brak dostępnych aktów prawnych.')
-                    : ListView(
-                        shrinkWrap: true,
-                        children: _latestLaws.map((law) {
-                          return ListTile(
-                            title: Text(law['title']),
-                            subtitle: Text('Typ: ${law['type']}'),
-                          );
-                        }).toList(),
-                      ),
+                ? Text('Brak dostępnych aktów prawnych.')
+                : ListView(
+              shrinkWrap: true,
+              children: _latestLaws.map((law) {
+                return ListTile(
+                  title: Text(law['title']),
+                  subtitle: Text('Typ: ${law['type']}'),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
@@ -942,7 +992,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kadencja i głosowania posłów',
+            Text('Kadencja sejmu',
                 style: TextStyle(fontSize: 18, color: Colors.black)),
             SizedBox(height: 8),
             Row(
@@ -951,17 +1001,26 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                 Container(
                   width: 220,
                   height: 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_selectedTerm',
-                    style: const TextStyle(
+                  child: TextField(
+                    controller: _termController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                    ),
+                    style: TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTerm = int.tryParse(value) ?? 10;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
