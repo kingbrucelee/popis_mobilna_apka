@@ -3,7 +3,7 @@ name: Build Flutter APK
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 jobs:
@@ -22,22 +22,30 @@ jobs:
           curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.13.6-stable.tar.xz
           tar xf flutter.tar.xz
           export PATH="$PWD/flutter/bin:$PATH"
-          
-          # Verify Flutter and Dart versions
+
+          # Ensure Flutter commands are available
+          echo $PATH
+          which flutter
           flutter --version
           dart --version
 
       # Step 3: Disable Flutter telemetry (optional)
       - name: Disable Flutter telemetry
-        run: flutter config --no-analytics
+        run: |
+          export PATH="$PWD/flutter/bin:$PATH"
+          flutter config --no-analytics
 
       # Step 4: Install dependencies
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          export PATH="$PWD/flutter/bin:$PATH"
+          flutter pub get
 
       # Step 5: Build APK
       - name: Build APK
-        run: flutter build apk --debug
+        run: |
+          export PATH="$PWD/flutter/bin:$PATH"
+          flutter build apk --debug
 
       # Step 6: Upload APK artifact
       - name: Upload APK
