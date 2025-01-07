@@ -3,34 +3,33 @@ name: Build Flutter APK
 on:
   push:
     branches:
-      - master # Change this to your main branch
+      - master
   pull_request:
 
 jobs:
   build-apk:
-    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up Flutter
+      - name: Clear Flutter Cache
+        run: |
+          rm -rf $HOME/.flutter
+          rm -rf $HOME/.pub-cache
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: stable # You can specify another version if needed
+          flutter-version: '3.13.0'
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Step 4: Build APK
       - name: Build APK
-        run: flutter build apk --debug # Replace --debug with --release for a release APK
+        run: flutter build apk --debug
 
-      # Step 5: Upload APK as an artifact
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
