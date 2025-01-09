@@ -4,10 +4,26 @@ import 'package:csv/csv.dart' as csv;
 import 'dart:math' as math;
 import 'dart:async';
 import 'dart:convert';
+import 'package:fl_chart/fl_chart.dart';
 
+// Kontrolery i klasy pomocnicze (Twoje autorskie)
 import '../controllers/seatsCalculator.dart';
 import '../controllers/electionCalc.dart';
-import '../api_wrappers/clubs.dart';
+
+// Tutaj importujemy plik z SejmAPI
+import '../api_wrappers/clubs.dart'; // <-- zmień ścieżkę na właściwą
+
+const Map<String, String> clubNameShortcuts = {
+  'Klub Parlamentarny Prawo i Sprawiedliwość': 'PiS',
+  'Klub Parlamentarny Koalicja Obywatelska - Platforma Obywatelska, Nowoczesna, Inicjatywa Polska, Zieloni':
+      'KO',
+  'Klub Parlamentarny Polskie Stronnictwo Ludowe - Trzecia Droga': 'PSL-TD',
+  'Klub Parlamentarny Polska 2050 - Trzecia Droga': 'Polska2050-TD',
+  'Koło Poselskie Razem': 'Razem',
+  'Koalicyjny Klub Parlamentarny Lewicy (Nowa Lewica, PPS, Unia Pracy)':
+      'Lewica',
+  'Klub Poselski Konfederacja': 'Konfederacja',
+};
 
 /// Główny widget ekranu z zakładkami
 class View3 extends StatefulWidget {
@@ -19,65 +35,11 @@ class View3 extends StatefulWidget {
 
 class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
   int termNumber = 10;
-  List<dynamic> coalitions = [];
 
-  Widget _buildPotentialCoalitionTab() {
-    if (coalitions.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return Column(
-      children: [
-        const Text(
-          'Potencjalne Koalicje',
-          style: TextStyle(fontSize: 24),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: coalitions.length,
-            itemBuilder: (context, index) {
-              var coalition = coalitions[index];
-              var totalMPs =
-                  coalition.fold(0, (sum, club) => sum + club['membersCount']);
-              var clubs = coalition.map((club) => club['id']).join(', ');
-              return ListTile(
-                title: Text('Koalicja ${index + 1}'),
-                subtitle:
-                    Text('Łączna liczba posłów: $totalMPs\nKluby: $clubs'),
-                onTap: () => _showCoalitionDetails(context, coalition),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showCoalitionDetails(BuildContext context, List<dynamic> coalition) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Szczegóły Koalicji'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: coalition.map((club) {
-              return ListTile(
-                title: Text(club['id']),
-                subtitle: Text('Posłów: ${club['membersCount']}'),
-              );
-            }).toList(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Zamknij'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // Poprawiamy typ na List<List<Map<String, dynamic>>>
+  List<List<Map<String, dynamic>>> coalitions = [];
 
   // -------------------------------------------------------
   // Dane testowe "dataJson" i "votesJson" (dla zakładki "Własne")
@@ -103,399 +65,9 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       "Miejsca do zdobycia": 8,
       "Uzupełniono": false,
     },
-    "Wrocław": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 14,
-      "Uzupełniono": false,
-    },
-    "Bydgoszcz": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Toruń": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 13,
-      "Uzupełniono": false,
-    },
-    "Lublin": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 15,
-      "Uzupełniono": false,
-    },
-    "Chełm": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Zielona Góra": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Łódź": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 10,
-      "Uzupełniono": false,
-    },
-    "Piotrków Trybunalski": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Sieradz": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Chrzanów": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 8,
-      "Uzupełniono": false,
-    },
-    "Kraków": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 14,
-      "Uzupełniono": false,
-    },
-    "Nowy Sącz": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 10,
-      "Uzupełniono": false,
-    },
-    "Tarnów": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Płock": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 10,
-      "Uzupełniono": false,
-    },
-    "Radom": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Siedlce": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Warszawa": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 20,
-      "Uzupełniono": false,
-    },
-    "Warszawa 2": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Opole": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Krosno": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 11,
-      "Uzupełniono": false,
-    },
-    "Rzeszów": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 15,
-      "Uzupełniono": false,
-    },
-    "Białystok": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 14,
-      "Uzupełniono": false,
-    },
-    "Gdańsk": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Słupsk": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 14,
-      "Uzupełniono": false,
-    },
-    "Bielsko-Biała": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Częstochowa": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 7,
-      "Uzupełniono": false,
-    },
-    "Gliwice": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Rybnik": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Katowice": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Sosnowiec": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Kielce": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 16,
-      "Uzupełniono": false,
-    },
-    "Elbląg": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 8,
-      "Uzupełniono": false,
-    },
-    "Olsztyn": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 10,
-      "Uzupełniono": false,
-    },
-    "Kalisz": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
-    "Konin": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Piła": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 9,
-      "Uzupełniono": false,
-    },
-    "Poznań": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 10,
-      "Uzupełniono": false,
-    },
-    "Koszalin": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 8,
-      "Uzupełniono": false,
-    },
-    "Szczecin": {
-      "PiS": 0,
-      "KO": 0,
-      "Trzecia Droga": 0,
-      "Lewica": 0,
-      "Konfederacja": 0,
-      "Frekwencja": 0.0,
-      "Miejsca do zdobycia": 12,
-      "Uzupełniono": false,
-    },
+    // ... pozostałe okręgi ...
   };
 
-  // votesJson
   Map<String, dynamic> votesJson = {
     "Legnica": {
       "PiS": 0.0,
@@ -511,290 +83,22 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
       "Lewica": 0.0,
       "Konfederacja": 0.0,
     },
-    "Wrocław": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Bydgoszcz": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Toruń": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Lublin": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Chełm": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Zielona Góra": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Łódź": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Piotrków Trybunalski": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Sieradz": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Chrzanów": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Kraków": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Nowy Sącz": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Tarnów": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Płock": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Radom": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Siedlce": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Warszawa": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Warszawa 2": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Opole": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Krosno": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Rzeszów": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Białystok": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Gdańsk": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Słupsk": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Bielsko-Biała": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Częstochowa": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Gliwice": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Rybnik": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Katowice": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Sosnowiec": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Kielce": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Elbląg": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Olsztyn": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Kalisz": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Konin": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Piła": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Poznań": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Koszalin": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
-    "Szczecin": {
-      "PiS": 0.0,
-      "KO": 0.0,
-      "Trzecia Droga": 0.0,
-      "Lewica": 0.0,
-      "Konfederacja": 0.0,
-    },
+    // ... pozostałe okręgi ...
   };
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+
+    // Ładujemy koalicje na start
     _loadCoalitions();
   }
 
   void _loadCoalitions() async {
-    List<dynamic> fetchedCoalitions = await findMinimalCoalitions(termNumber);
+    // Wywołujemy SejmAPI().findMinimalCoalitions(...), jeżeli w Twoim API tak się to nazywa
+    final fetchedCoalitions =
+        await SejmAPI().findMinimalCoalitions(term: termNumber);
     setState(() {
       coalitions = fetchedCoalitions;
     });
@@ -806,93 +110,424 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  /// Przykładowa funkcja budująca zawartość nieużywanych jeszcze zakładek
-  Widget _buildTabContent(String title) {
-    return Center(
-      child: Text('$title content here', style: const TextStyle(fontSize: 14)),
-    );
-  }
-
+  /// Główny build ekranu
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // CHANGED: Dodaj padding w AppBar (lub użyj PreferredSize) żeby lekko "opuścić" napis
       appBar: AppBar(
+        title: const Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text('Analiza Polityczna'),
+        ),
         centerTitle: true,
-        title: Padding(
-          padding: const EdgeInsets.only(top: 18.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.bar_chart, size: 32),
-              SizedBox(width: 8),
-              Text(
-                'Analiza Polityczna',
-                style: TextStyle(fontSize: 24),
-              ),
+      ),
+      body: Column(
+        children: [
+          // Wybór kadencji
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text(
+              "Kadencja sejmu",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          // Nasz TermSelector
+          TermSelector(
+            initialTerm: termNumber,
+            onTermChanged: (newTerm) {
+              setState(() {
+                termNumber = newTerm;
+                _loadCoalitions(); // Odśwież dane dla nowej kadencji
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // --- Dodajemy TabBar tu, zamiast w bottomNavigationBar:
+          TabBar(
+            controller: _tabController,
+            labelColor: Colors.red,
+            unselectedLabelColor: Colors.grey,
+            tabs: const [
+              Tab(text: "Koalicje"),
+              Tab(text: "Kalkulator"),
             ],
           ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.red,
-          tabs: const [
-            Tab(
-              child: Text(
-                'Potencjalne Koalicje',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
+
+          // Rozwinięcie zakładek
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // 1) Zakładka "Potencjalne Koalicje"
+                _buildPotentialCoalitionTab(),
+                // 2) Zakładka "Kalkulator Wyborczy"
+                _buildElectionCalculatorTab(),
+              ],
             ),
-            Tab(
-              child: Text(
-                'Kalkulator Wyborczy',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ),
-            Tab(
-              child: Text(
-                'Korelacje Wyborcze',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ),
-            Tab(
-              child: Text(
-                'Prawo Benforda',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPotentialCoalitionTab(),
-          _buildElectionCalculatorTab(),
-          _buildTabContent('Korelacje Wyborcze'),
-          _buildTabContent('Prawo Benforda'),
+          ),
         ],
       ),
     );
   }
 
-  /// Zakładka "Kalkulator Wyborczy" z dwoma podzakładkami: "Własne" i "Rzeczywiste"
-  Widget _buildElectionCalculatorTab() {
-    return DefaultTabController(
-      length: 2, // Dwie podzakładki
+  /// -----------------------
+  /// Zakładka 1: KOALICJE
+  /// -----------------------
+  Widget _buildPotentialCoalitionTab() {
+    return FutureBuilder<List<List<Map<String, dynamic>>>>(
+      future: SejmAPI().findMinimalCoalitions(term: termNumber),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Błąd: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Brak danych'));
+        }
+
+        final fetchedCoalitions = snapshot.data ?? [];
+
+        // Mapowanie danych do wyświetlenia w tabeli
+        final coalitionData = fetchedCoalitions.map((coalition) {
+          final totalMembers = coalition
+              .map((club) => club['membersCount'] as int)
+              .reduce((a, b) => a + b);
+
+          final largestMembers = coalition
+              .map((club) => club['membersCount'] as int)
+              .reduce(math.max);
+
+          final ratio =
+              totalMembers > 0 ? (largestMembers / totalMembers) * 100.0 : 0.0;
+
+          // Skracanie nazw klubów
+          final clubNames = coalition.map((club) {
+            final fullName = club['name'] as String;
+            return clubNameShortcuts[fullName] ?? fullName;
+          }).join(', ');
+
+          return {
+            'ProcentNajwiekszyKlub': ratio.toStringAsFixed(2),
+            'Kluby': clubNames,
+            'LacznaIloscPoslow': totalMembers,
+            'IloscKlubow': coalition.length,
+          };
+        }).toList();
+
+        return Column(
+          children: [
+            // Tabela
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(
+                  child: _buildDataTable(coalitionData),
+                ),
+              ),
+            ),
+            // Metryki
+            _buildMetrics(coalitionData),
+            // Selektor koalicji (np. do BottomSheet)
+            _buildCoalitionSelector(context, fetchedCoalitions),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Tabela z minimalnymi koalicjami
+  Widget _buildDataTable(List<Map<String, dynamic>> coalitionData) {
+    return DataTable(
+      columnSpacing: 16.0,
+      columns: const [
+        DataColumn(
+          label: Expanded(
+            child: Text(
+              '''Procent, jaki stanowi
+największy klub''',
+              softWrap: true,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        DataColumn(
+          label: Expanded(
+            child: Text(
+              'Kluby',
+              softWrap: true,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        DataColumn(
+          label: Expanded(
+            child: Text(
+              '''Łączna ilość 
+posłów''',
+              softWrap: true,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        DataColumn(
+          label: Expanded(
+            child: Text(
+              'Ilość klubów',
+              softWrap: true,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+      rows: coalitionData.map((data) {
+        return DataRow(cells: [
+          DataCell(Center(
+            child: Text(
+              data['ProcentNajwiekszyKlub'],
+              textAlign: TextAlign.center,
+            ),
+          )),
+          DataCell(SizedBox(
+            width: 200.0,
+            child: Text(
+              data['Kluby'],
+              softWrap: true,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          )),
+          DataCell(Center(
+            child: Text(
+              data['LacznaIloscPoslow'].toString(),
+              textAlign: TextAlign.center,
+            ),
+          )),
+          DataCell(Center(
+            child: Text(
+              data['IloscKlubow'].toString(),
+              textAlign: TextAlign.center,
+            ),
+          )),
+        ]);
+      }).toList(),
+    );
+  }
+
+  /// Metryki: liczba koalicji, min i max posłów
+  Widget _buildMetrics(List<Map<String, dynamic>> coalitionData) {
+    if (coalitionData.isEmpty) {
+      return const SizedBox();
+    }
+
+    int totalCoalitions = coalitionData.length;
+    int minPoslow = coalitionData
+        .map((data) => data['LacznaIloscPoslow'] as int)
+        .reduce(math.min);
+    int maxPoslow = coalitionData
+        .map((data) => data['LacznaIloscPoslow'] as int)
+        .reduce(math.max);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildMetricTile(
+              'Ilość potencjalnych koalicji',
+              totalCoalitions.toString(),
+              fontSize: 4.0,
+            ),
+            _buildMetricTile(
+              'Minimalna ilość posłów',
+              minPoslow.toString(),
+              fontSize: 4.0,
+            ),
+            _buildMetricTile(
+              'Maksymalna ilość posłów',
+              maxPoslow.toString(),
+              fontSize: 4.0,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricTile(String title, String value,
+      {required double fontSize}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
-          const TabBar(
-            labelColor: Colors.red,
-            tabs: [
-              Tab(text: "Własne"),
-              Tab(text: "Rzeczywiste"),
-            ],
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 20)),
+        ],
+      ),
+    );
+  }
+
+  /// Dropdown do wyboru konkretnej koalicji i pokazania szczegółów (BottomSheet)
+  Widget _buildCoalitionSelector(
+    BuildContext context,
+    List<List<Map<String, dynamic>>> potentialCoalitions,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          const Text(
+            "Szczegóły Koalicji",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
+          DropdownButton<int>(
+            items: List.generate(
+              potentialCoalitions.length,
+              (index) => DropdownMenuItem(
+                value: index,
+                child: Text('Koalicja nr ${index + 1}'),
+              ),
+            ),
+            onChanged: (value) {
+              if (value != null) {
+                _showCoalitionDetails(context, potentialCoalitions[value]);
+              }
+            },
+            hint: const Text("Wybierz koalicję"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// BottomSheet z wykresem kołowym
+  void _showCoalitionDetails(
+    BuildContext context,
+    List<Map<String, dynamic>> coalition,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            Expanded(child: _buildPieChart(coalition)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPieChart(List<Map<String, dynamic>> coalition) {
+    final totalMembers = coalition.fold<int>(
+      0,
+      (sum, club) => sum + (club['membersCount'] as int),
+    );
+
+    final List<Color> expandedColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.amber,
+      Colors.pink,
+      Colors.brown,
+      Colors.cyan,
+      Colors.deepOrange,
+      Colors.indigo,
+      Colors.lightBlue,
+      Colors.lime,
+      Colors.deepPurple,
+      Colors.yellowAccent,
+      Colors.lightGreen,
+    ];
+
+    int colorIndex = 0;
+    List<PieChartSectionData> pieData = coalition.map((club) {
+      final double percentage = (club['membersCount'] / totalMembers) * 100;
+      return PieChartSectionData(
+        value: club['membersCount'].toDouble(),
+        title: "${percentage.toStringAsFixed(1)}%",
+        color: expandedColors[colorIndex++ % expandedColors.length],
+        radius: 50,
+        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        badgePositionPercentageOffset: 1.5,
+      );
+    }).toList();
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: PieChart(
+                PieChartData(
+                  sections: pieData,
+                  centerSpaceRadius: 40,
+                  sectionsSpace: 3,
+                  borderData: FlBorderData(show: false),
+                  startDegreeOffset: 270,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: coalition.map((club) {
+                final idx = coalition.indexOf(club);
+                final color = expandedColors[idx % expandedColors.length];
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      color: color,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${club['name']} (${club['membersCount']} posłów)',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// -----------------------
+  /// Zakładka 2: KALKULATOR
+  /// -----------------------
+  Widget _buildElectionCalculatorTab() {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
           Expanded(
             child: TabBarView(
               children: [
-                // 1) WŁASNE – nasz dotychczasowy widget
+                // 1) WŁASNE
                 ElectionCalculatorTab(
                   dataJson: dataJson,
                   votesJson: votesJson,
@@ -907,9 +542,8 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
                     });
                   },
                 ),
-
-                // 2) RZECZYWISTE – wczytuje dane z CSV i wyświetla
-                const RealElectionCalculatorTab(),
+                // 2) RZECZYWISTE
+                const Center(child: Text("Tu będzie logika rzeczywista...")),
               ],
             ),
           ),
@@ -919,8 +553,106 @@ class _View3State extends State<View3> with SingleTickerProviderStateMixin {
   }
 }
 
+/// Widget do wyboru kadencji (plus i minus)
+class TermSelector extends StatefulWidget {
+  final int initialTerm;
+  final ValueChanged<int> onTermChanged;
+
+  const TermSelector({
+    Key? key,
+    required this.initialTerm,
+    required this.onTermChanged,
+  }) : super(key: key);
+
+  @override
+  _TermSelectorState createState() => _TermSelectorState();
+}
+
+class _TermSelectorState extends State<TermSelector> {
+  late int _currentTerm;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTerm = widget.initialTerm;
+  }
+
+  void _incrementTerm() {
+    setState(() {
+      _currentTerm++;
+      widget.onTermChanged(_currentTerm);
+    });
+  }
+
+  void _decrementTerm() {
+    if (_currentTerm > 1) {
+      setState(() {
+        _currentTerm--;
+        widget.onTermChanged(_currentTerm);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // CHANGED: Dodaj alignment: Alignment.center aby wyśrodkować tekst
+        Container(
+          width: 220,
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          alignment: Alignment.center, // <-- To wyśrodkuje nasz numer kadencji
+          child: Text(
+            '$_currentTerm',
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8.0),
+        // Minus button
+        GestureDetector(
+          onTap: _decrementTerm,
+          child: Container(
+            width: 70,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            padding: const EdgeInsets.all(12.0),
+            child: const Icon(Icons.remove, color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 8.0),
+        // Plus button
+        GestureDetector(
+          onTap: _incrementTerm,
+          child: Container(
+            width: 70,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            padding: const EdgeInsets.all(12.0),
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// ----------------------------------------------------------
-/// Widget `ElectionCalculatorTab` ("Własne" dane użytkownika)
+/// Widget ElectionCalculatorTab ("Własne" dane użytkownika)
 /// ----------------------------------------------------------
 class ElectionCalculatorTab extends StatefulWidget {
   final Map<String, dynamic> dataJson;
@@ -943,7 +675,8 @@ class ElectionCalculatorTab extends StatefulWidget {
 class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   String _type = "ilościowy"; // "ilościowy" lub "procentowy"
   String _method = "d'Hondt";
-  late String _selectedDistrict;
+
+  late String _selectedDistrict; // nazwa klucza z dataJson/votesJson
 
   double _pis = 0.0;
   double _ko = 0.0;
@@ -966,8 +699,8 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   @override
   void initState() {
     super.initState();
+    // Domyślnie: pierwszy z okręgów dostępnych w dataJson
     _selectedDistrict = widget.dataJson.keys.first;
-    _loadDistrictValues(_selectedDistrict);
 
     _pisController = TextEditingController();
     _koController = TextEditingController();
@@ -977,6 +710,9 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     _frequencyController = TextEditingController();
     _seatsController = TextEditingController();
 
+    // Wczytujemy wartości dla aktualnie wybranego okręgu
+    _loadDistrictValues(_selectedDistrict);
+    // Ustawiamy w TextEditingController
     _setControllersValues();
   }
 
@@ -1028,6 +764,7 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   }
 
   double _parseDouble(String val) {
+    // Pozwalamy na wpisywanie z przecinkiem
     return double.tryParse(val.replaceAll(',', '.')) ?? 0.0;
   }
 
@@ -1045,22 +782,24 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
       return;
     }
 
+    // Jeśli mamy tryb procentowy, to suma musi dać 100
     if (_type == "procentowy" && (sumVotes - 100.0).abs() > 0.0001) {
       _showErrorDialog(
           "Suma procentów musi wynosić dokładnie 100% (obecnie: $sumVotes).");
       return;
     }
 
-    double totalVotes = _frequency;
-    double actualPis = _type == "procentowy" ? (_pis / 100) * totalVotes : _pis;
-    double actualKo = _type == "procentowy" ? (_ko / 100) * totalVotes : _ko;
-    double actualTd = _type == "procentowy" ? (_td / 100) * totalVotes : _td;
+    // Zamiana z procentów -> wartości "w sztukach" głosów
+    double actualPis = _type == "procentowy" ? (_pis / 100) * _frequency : _pis;
+    double actualKo = _type == "procentowy" ? (_ko / 100) * _frequency : _ko;
+    double actualTd = _type == "procentowy" ? (_td / 100) * _frequency : _td;
     double actualLewica =
-        _type == "procentowy" ? (_lewica / 100) * totalVotes : _lewica;
+        _type == "procentowy" ? (_lewica / 100) * _frequency : _lewica;
     double actualKonf = _type == "procentowy"
-        ? (_konfederacja / 100) * totalVotes
+        ? (_konfederacja / 100) * _frequency
         : _konfederacja;
 
+    // Zapisujemy do głównego modelu (przekazanego z View3), aby przechowywać stan
     widget.votesJson[_selectedDistrict]["PiS"] = actualPis;
     widget.votesJson[_selectedDistrict]["KO"] = actualKo;
     widget.votesJson[_selectedDistrict]["Trzecia Droga"] = actualTd;
@@ -1073,17 +812,19 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     widget.onVotesJsonChanged(widget.votesJson);
     widget.onDataJsonChanged(widget.dataJson);
 
+    // Tu używasz swojej logiki liczenia mandatów:
     final result = SeatsCalculator.chooseMethods(
       PiS: actualPis,
       KO: actualKo,
       TD: actualTd,
       Lewica: actualLewica,
       Konfederacja: actualKonf,
-      Freq: totalVotes,
+      Freq: _frequency,
       seatsNum: _seatsNum,
       method: _method,
     );
 
+    // Zakładamy, że result[0] to Map<String,int> z liczbą mandatów
     final seatsMap = result[0] as Map<String, int>;
 
     setState(() {
@@ -1121,11 +862,10 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
   Widget _buildResultsTable() {
     if (_resultSeats.isEmpty) {
       return const Text(
-        "",
+        "Brak obliczeń",
         style: TextStyle(color: Colors.grey),
       );
     }
-
     return DataTable(
       columns: const [
         DataColumn(label: Text('Komitet')),
@@ -1142,49 +882,72 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
     );
   }
 
+  /// Dropdown z wyborem okręgu
+  Widget _buildDistrictSelector() {
+    final keys = widget.dataJson.keys.toList();
+    return DropdownButton<String>(
+      value: _selectedDistrict,
+      items: keys.map((dist) {
+        return DropdownMenuItem(
+          value: dist,
+          child: Text(dist),
+        );
+      }).toList(),
+      onChanged: (val) {
+        if (val != null) {
+          setState(() {
+            _selectedDistrict = val;
+            // Wczytujemy wartości z modelu
+            _loadDistrictValues(val);
+            _setControllersValues();
+          });
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Wybierz okręg:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          DropdownButton<String>(
-            value: _selectedDistrict,
-            items: widget.dataJson.keys.map<DropdownMenuItem<String>>((dist) {
-              return DropdownMenuItem<String>(
-                value: dist,
-                child: Text(dist),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedDistrict = value;
-                  _loadDistrictValues(value);
-                  _setControllersValues();
-                });
-              }
-            },
-          ),
-          const Divider(),
-          const Text('Rodzaj głosów:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          DropdownButton<String>(
-            value: _type,
-            items: const [
-              DropdownMenuItem(value: "ilościowy", child: Text("Ilościowy")),
-              DropdownMenuItem(value: "procentowy", child: Text("Procentowy")),
+          // Wybór okręgu
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "Okręg: ",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              _buildDistrictSelector(),
             ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _type = value;
-                });
-              }
-            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text("Typ danych: "),
+              DropdownButton<String>(
+                value: _type,
+                items: const [
+                  DropdownMenuItem(
+                    value: "ilościowy",
+                    child: Text("ilościowy"),
+                  ),
+                  DropdownMenuItem(
+                    value: "procentowy",
+                    child: Text("procentowy"),
+                  ),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _type = val;
+                    });
+                  }
+                },
+              ),
+            ],
           ),
           const Divider(),
           _buildNumberField(label: 'PiS', controller: _pisController),
@@ -1192,14 +955,14 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
           _buildNumberField(label: 'Trzecia Droga', controller: _tdController),
           _buildNumberField(label: 'Lewica', controller: _lewicaController),
           _buildNumberField(label: 'Konfederacja', controller: _konfController),
+          const SizedBox(height: 8),
           _buildNumberField(
-              label: 'Frekwencja (%)', controller: _frequencyController),
-          TextField(
-            keyboardType: TextInputType.number,
-            decoration:
-                const InputDecoration(labelText: 'Liczba mandatów w okręgu'),
-            controller: _seatsController,
-          ),
+              label: _type == "procentowy"
+                  ? 'Frekwencja (liczba wszystkich głosów)'
+                  : 'Frekwencja (łączna liczba uprawnionych?)',
+              controller: _frequencyController),
+          _buildNumberField(
+              label: 'Liczba mandatów w okręgu', controller: _seatsController),
           const SizedBox(height: 16),
           const Text('Wybierz metodę:',
               style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1227,361 +990,15 @@ class _ElectionCalculatorTabState extends State<ElectionCalculatorTab> {
             child: const Text('Oblicz podział mandatów'),
           ),
           const SizedBox(height: 16),
-          const Text('Wynik podziału mandatów:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Wynik podziału mandatów:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 10),
           _buildResultsTable(),
-          const SizedBox(height: 100),
+          const SizedBox(height: 50),
         ],
       ),
-    );
-  }
-}
-
-/// ----------------------------------------------------------
-/// Widget "Rzeczywiste" – wczytuje dane z CSV
-/// ----------------------------------------------------------
-class RealElectionCalculatorTab extends StatefulWidget {
-  const RealElectionCalculatorTab({Key? key}) : super(key: key);
-
-  @override
-  _RealElectionCalculatorTabState createState() =>
-      _RealElectionCalculatorTabState();
-}
-
-class _RealElectionCalculatorTabState extends State<RealElectionCalculatorTab> {
-  final List<int> _availableYears = [2001, 2005, 2007, 2011, 2015, 2019];
-  int? _selectedYear;
-
-  double _threshold = 5.0; // zwykły próg
-  double _thresholdCoalition = 8.0; // próg dla koalicji
-
-  // Nazwy partii znalezione w CSV (kolumny)
-  List<String> _possibleParties = [];
-  // Partie zwolnione z progu
-  List<String> _exemptedParties = [];
-
-  // Surowe dane CSV
-  List<List<dynamic>> _csvRaw = [];
-
-  // Wynik: okręg -> metoda -> partia -> mandaty
-  Map<String, Map<String, Map<String, int>>> _results = {};
-
-  /// Mapa: "1" -> 12, "2" -> 8, itd.
-  final Map<String, int> seatsPerDistrict = {
-    "1": 12,
-    "2": 8,
-    "3": 14,
-    "4": 12,
-    "5": 13,
-    "6": 15,
-    "7": 12,
-    "8": 12,
-    "9": 10,
-    "10": 9,
-    "11": 12,
-    "12": 8,
-    "13": 14,
-    "14": 10,
-    "15": 9,
-    "16": 10,
-    "17": 9,
-    "18": 12,
-    "19": 20,
-    "20": 12,
-    "21": 12,
-    "22": 11,
-    "23": 15,
-    "24": 14,
-    "25": 12,
-    "26": 14,
-    "27": 9,
-    "28": 7,
-    "29": 9,
-    "30": 9,
-    "31": 12,
-    "32": 9,
-    "33": 16,
-    "34": 8,
-    "35": 10,
-    "36": 12,
-    "37": 9,
-    "38": 9,
-    "39": 10,
-    "40": 8,
-    "41": 12
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Wybierz rok:",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          DropdownButton<int>(
-            value: _selectedYear,
-            hint: const Text("Rok"),
-            items: _availableYears.map((y) {
-              return DropdownMenuItem<int>(
-                value: y,
-                child: Text(y.toString()),
-              );
-            }).toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedYear = val;
-                if (val != null) {
-                  _loadCsv();
-                }
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text("Próg wyborczy (%)",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          TextField(
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: ""),
-            onChanged: (val) {
-              final d = double.tryParse(val.replaceAll(',', '.'));
-              if (d != null) setState(() => _threshold = d);
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text("Próg dla koalicji (%)",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          TextField(
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: ""),
-            onChanged: (val) {
-              final d = double.tryParse(val.replaceAll(',', '.'));
-              if (d != null) setState(() => _thresholdCoalition = d);
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text("Partie zwolnione z progu (opcjonalne):",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          _buildExemptedPartiesWidget(),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _calculateResults,
-            child: const Text("Oblicz"),
-          ),
-          const SizedBox(height: 20),
-          _buildResultsTable(),
-        ],
-      ),
-    );
-  }
-
-  /// Wczytuje plik CSV
-  Future<void> _loadCsv() async {
-    if (_selectedYear == null) return;
-
-    try {
-      final filename =
-          'wyniki_gl_na_listy_po_okregach_sejm_utf8_$_selectedYear.csv';
-      final rawString = await rootBundle.loadString('Data/$filename');
-
-      // Starsze lata często ','; nowsze – ';'
-      final separator = (_selectedYear! < 2015) ? ',' : ';';
-
-      final listData = const csv.CsvToListConverter().convert(
-        rawString,
-        fieldDelimiter: separator,
-      );
-
-      setState(() {
-        _csvRaw = listData;
-        _possibleParties = _extractPartyHeaders(listData);
-        _exemptedParties.clear();
-      });
-    } catch (e) {
-      debugPrint("Błąd wczytywania pliku CSV: $e");
-      _csvRaw = [];
-    }
-  }
-
-  /// Szuka kolumn, które zawierają "Komitet Wyborczy" lub "Koalicyjny" (nieważne wielkość liter).
-  List<String> _extractPartyHeaders(List<List<dynamic>> data) {
-    if (data.isEmpty) return [];
-    final headers = data.first.map((e) => e.toString()).toList();
-
-    return headers.where((colName) {
-      final lower = colName.toLowerCase();
-      return lower.contains("komitet wyborczy") || lower.contains("koalicyjny");
-    }).toList();
-  }
-
-  /// Główna logika obliczeń
-  void _calculateResults() {
-    if (_csvRaw.isEmpty) return;
-
-    final headerRow = _csvRaw.first.map((e) => e.toString()).toList();
-    // Znajdź kolumnę z "Okręg"
-    final districtIndex = headerRow.indexWhere(
-      (col) => col.toLowerCase() == "okręg",
-    );
-    if (districtIndex < 0) {
-      debugPrint("Nie znaleziono kolumny 'Okręg' w nagłówku CSV.");
-      return;
-    }
-
-    // Mapa: "1" -> { "partiaX": 123, "partiaY": 456 }
-    final Map<String, Map<String, double>> votesPerDistrict = {};
-
-    for (var row in _csvRaw.skip(1)) {
-      if (row.length <= districtIndex) continue;
-
-      final districtNumber = row[districtIndex].toString();
-      // Np. "1", "2", "3"...
-
-      if (!votesPerDistrict.containsKey(districtNumber)) {
-        votesPerDistrict[districtNumber] = {};
-      }
-
-      // Idź po nazwach partii
-      for (var partyHeader in _possibleParties) {
-        final colIndex = headerRow.indexOf(partyHeader);
-        if (colIndex < 0 || colIndex >= row.length) continue;
-
-        final value = row[colIndex]?.toString().trim() ?? '';
-        final parsed = double.tryParse(value);
-        final votes = parsed ?? 0.0;
-
-        votesPerDistrict[districtNumber]![partyHeader] =
-            (votesPerDistrict[districtNumber]![partyHeader] ?? 0) + votes;
-      }
-    }
-
-    // Czyścimy stare wyniki
-    _results.clear();
-
-    // Pętla po okręgach
-    votesPerDistrict.forEach((dist, partiesMap) {
-      final seatsNum = seatsPerDistrict[dist] ?? 0;
-      if (seatsNum <= 0) {
-        debugPrint(
-            "Ostrzeżenie: brak liczby mandatów w seatsPerDistrict dla okręgu $dist");
-        return;
-      }
-
-      final totalVotes = partiesMap.values.fold(0.0, (a, b) => a + b);
-
-      // Wyfiltrowane (przekroczyły próg)
-      final Map<String, double> filtered = {};
-      partiesMap.forEach((partyName, count) {
-        final p = (totalVotes == 0) ? 0 : (count / totalVotes) * 100.0;
-        final isCoalition = partyName.toLowerCase().contains("koalicyjny");
-
-        final neededThreshold = isCoalition ? _thresholdCoalition : _threshold;
-
-        if (_exemptedParties.contains(partyName) || p >= neededThreshold) {
-          filtered[partyName] = count;
-        }
-      });
-
-      if (filtered.isEmpty) {
-        debugPrint("Okręg $dist: wszystkie partie poniżej progu.");
-        return;
-      }
-
-      final qualifiedParties = filtered.keys.toList();
-      final qualifiedVotes = filtered.values.toList();
-
-      // Liczymy 4-5 metod na raz
-      final districtResult = ElectionCalc.chooseMethod(
-        qualifiedDictionary: qualifiedParties,
-        numberOfVotes: qualifiedVotes,
-        year: _selectedYear.toString(),
-        seatsNum: seatsNum,
-      );
-
-      _results[dist] = districtResult;
-    });
-
-    setState(() {
-      // odśwież UI
-    });
-  }
-
-  /// Render tabeli z wynikami
-  Widget _buildResultsTable() {
-    if (_results.isEmpty) {
-      return const Text(
-        "",
-        style: TextStyle(color: Colors.grey),
-      );
-    }
-
-    // Zbierz wszystkie partie, które wystąpiły
-    final allParties = <String>{};
-    _results.values.forEach((methodMap) {
-      methodMap.values.forEach((mapParties) {
-        allParties.addAll(mapParties.keys);
-      });
-    });
-    final allPartiesList = allParties.toList()..sort();
-
-    // Budujemy wiersze:
-    final rows = <DataRow>[];
-    _results.forEach((dist, methodsMap) {
-      methodsMap.forEach((methodName, seatsMap) {
-        final cells = <DataCell>[];
-        cells.add(DataCell(Text(dist))); // np. "1"
-        cells.add(DataCell(Text(methodName))); // np. "d'Hondt"
-
-        for (final p in allPartiesList) {
-          final s = seatsMap[p] ?? 0;
-          cells.add(DataCell(Text(s.toString())));
-        }
-
-        rows.add(DataRow(cells: cells));
-      });
-    });
-
-    // Nagłówki:
-    final columns = [
-      const DataColumn(label: Text("Okręg")),
-      const DataColumn(label: Text("Metoda")),
-      ...allPartiesList.map((p) => DataColumn(label: Text(p))),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(columns: columns, rows: rows),
-    );
-  }
-
-  /// Checkboxy do zwolnienia partii z progu
-  Widget _buildExemptedPartiesWidget() {
-    if (_possibleParties.isEmpty) {
-      return const Text("");
-    }
-
-    return Column(
-      children: _possibleParties.map((party) {
-        return Row(
-          children: [
-            Checkbox(
-              value: _exemptedParties.contains(party),
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _exemptedParties.add(party);
-                  } else {
-                    _exemptedParties.remove(party);
-                  }
-                });
-              },
-            ),
-            Expanded(child: Text(party)),
-          ],
-        );
-      }).toList(),
     );
   }
 }

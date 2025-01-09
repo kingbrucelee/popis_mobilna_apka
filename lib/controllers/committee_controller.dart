@@ -97,6 +97,7 @@ class CommitteeController {
     final uniqueMembers = <String>{};
     final clubs = <String, List<String>>{};
     final peoples = <String, int>{};
+    final functions = <String, Map<String, String>>{};
 
     if (code == null || code == "łącznie") {
       for (final committee in data) {
@@ -108,6 +109,14 @@ class CommitteeController {
             }
           }
           peoples[member['lastFirstName']] = (peoples[member['lastFirstName']] ?? 0) + 1;
+
+          // Adding function to the map
+          if (member['function'] != null) {
+            functions[member['lastFirstName']] = {
+              'club': member['club'] ?? 'N/A',
+              'function': member['function'] ?? 'N/A',
+            };
+          }
         }
       }
     } else {
@@ -117,6 +126,14 @@ class CommitteeController {
           clubs[member['club']]!.add(member['lastFirstName']);
         }
         peoples[member['lastFirstName']] = (peoples[member['lastFirstName']] ?? 0) + 1;
+
+        // Adding function to the map
+        if (member['function'] != null) {
+          functions[member['lastFirstName']] = {
+            'club': member['club'] ?? 'N/A',
+            'function': member['function'] ?? 'N/A',
+          };
+        }
       }
     }
 
@@ -124,7 +141,12 @@ class CommitteeController {
       {
         'clubs': clubs,
         'members': peoples,
+        'functions': functions,
       }
     ];
   }
+
+
+
+
 }

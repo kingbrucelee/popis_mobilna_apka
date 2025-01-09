@@ -1,42 +1,132 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
-Future<List<dynamic>> getClubs(int term) async {
-  final response = await http.get(Uri.parse('https://api.sejm.gov.pl/sejm/term$term/clubs'));
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to load clubs');
+class SejmAPI {
+  final String baseUrl = 'https://api.sejm.gov.pl/sejm';
+
+  Future<http.Response> getClubs(int term) async {
+    final url = Uri.parse('$baseUrl/term$term/clubs');
+    return await http.get(url);
   }
-}
 
-Future<List<dynamic>> findMinimalCoalitions(int term, {int threshold = 231}) async {
-  List<dynamic> clubs = await getClubs(term);
-  clubs.sort((a, b) => b['membersCount'].compareTo(a['membersCount']));
+  Future<Map<String, dynamic>> getClub(int term, String id) async {
+    final url = Uri.parse('$baseUrl/term$term/clubs/$id');
+    final response = await http.get(url);
 
-  List<List<dynamic>> minimalCoalitions = [];
+    // Tu może się zdarzyć, że `response.bodyBytes` jest pusty
+    // albo `jsonDecode(...)` zwróci null
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
 
-  for (int i = 1; i <= clubs.length; i++) {
-    for (var coalition in combinations(clubs, i)) {
-      int totalMPs = coalition.fold(0, (sum, club) => sum + club['membersCount'] as int);
-      if (totalMPs >= threshold) {
-        minimalCoalitions.add(coalition);
-        break;
+  Future<Uint8List> getClubLogo(int term, String id) async {
+    final url = Uri.parse('$baseUrl/term$term/clubs/$id/logo');
+    final response = await http.get(url);
+    return response.bodyBytes;
+  }
+
+  /// Metoda wyszukująca minimalne koalicje
+  /// [term] – numer kadencji, [threshold] – próg większości (np. 231),
+  /// [maxCombinations] – maksymalny rozmiar grupy, do której ma sens rozpatrywać kombinacje.
+  ///
+  /// Zwraca listę list klubów (każda z list to jedna możliwa minimalna koalicja).
+  Future<List<List<Map<String, dynamic>>>> findMinimalCoalitions({
+    int term = 10,
+    int threshold = 231,
+    int? maxCombinations,
+  }) async {
+    final response = await getClubs(term);
+    List<dynamic> clubs = jsonDecode(utf8.decode(response.bodyBytes));
+
+    // Sortowanie – kluby z największą liczbą posłów najpierw
+    clubs.sort((a, b) =>
+        (b['membersCount'] as num).compareTo(a['membersCount'] as num));
+
+    maxCombinations ??= clubs.length;
+
+    List<List<Map<String, dynamic>>> minimalCoalitions = [];
+    Set<Set<String>> minimalCoalitionNames = {};
+
+    for (int coalitionSize = 1;
+        coalitionSize <= clubs.length && coalitionSize <= maxCombinations;
+        coalitionSize++) {
+      // Generujemy wszystkie kombinacje klubów o wielkości `coalitionSize`
+      Iterable<List<dynamic>> combinations =
+          generateCombinations(clubs, coalitionSize);
+
+      for (var coalition in combinations) {
+        int totalMPs = coalition.fold<int>(
+          0,
+          (sum, club) => sum + (club['membersCount'] as int),
+        );
+
+        // Tworzymy Set<String> nazw (lub ID) klubów,
+        // żeby później porównywać, czy dana koalicja nie jest już "zawarta" w innej
+        Set<String> coalitionNames =
+            coalition.map((club) => club['name'] as String).toSet();
+
+        // Warunek: przekracza próg (231) i nie jest nadzbędna w innej dotychczas znalezionej
+        if (totalMPs >= threshold &&
+            !minimalCoalitionNames
+                .any((existing) => existing.containsAll(coalitionNames))) {
+          // Sprawdzamy minimalność: usunięcie któregokolwiek klubu powoduje spadek < threshold?
+          bool isMinimal = true;
+          for (var club in coalition) {
+            int subsetMPs = coalition
+                .where((c) => c != club)
+                .fold<int>(0, (sum, c) => sum + (c['membersCount'] as int));
+
+            if (subsetMPs >= threshold) {
+              isMinimal = false;
+              break;
+            }
+          }
+
+          if (isMinimal) {
+            minimalCoalitions.add(List<Map<String, dynamic>>.from(coalition));
+            minimalCoalitionNames.add(coalitionNames);
+          }
+        }
+      }
+    }
+
+    return minimalCoalitions;
+  }
+
+  /// Generator kombinacji (rekurencyjny)
+  Iterable<List<T>> generateCombinations<T>(List<T> list, int size) sync* {
+    if (size == 0) {
+      yield [];
+    } else {
+      for (int i = 0; i < list.length; i++) {
+        for (var combination
+            in generateCombinations(list.sublist(i + 1), size - 1)) {
+          yield [list[i], ...combination];
+        }
       }
     }
   }
 
-  return minimalCoalitions;
-}
-
-Iterable<List<T>> combinations<T>(List<T> list, int k) sync* {
-  if (k == 0) {
-    yield [];
-  } else {
-    for (int i = 0; i <= list.length - k; i++) {
-      for (var tail in combinations(list.sublist(i + 1), k - 1)) {
-        yield [list[i], ...tail];
-      }
+  /// Przykładowy print wszystkich koalicji w terminalu
+  void printCoalitionsTable(List<List<Map<String, dynamic>>> coalitions) {
+    print('Coalitions:');
+    for (int i = 0; i < coalitions.length; i++) {
+      final coalition = coalitions[i];
+      final int totalMPs = coalition.fold<int>(
+        0,
+        (sum, club) => sum + (club['membersCount'] as int),
+      );
+      final String clubNames =
+          coalition.map((club) => club['name'] as String).join(', ');
+      print('Coalition ${i + 1}: Clubs: $clubNames, Total MPs: $totalMPs');
     }
   }
+}
+
+// --------------------------------------------------
+// Szybki test w `main()`:
+void main() async {
+  final api = SejmAPI();
+  final coalitions = await api.findMinimalCoalitions();
+  api.printCoalitionsTable(coalitions);
 }
