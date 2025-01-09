@@ -1,0 +1,57 @@
+name: Build and Distribute Linux and Web App
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    name: Build Native Linux and Web App
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Checkout the code
+      - uses: actions/checkout@v2
+
+      # Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: stable
+
+      # Build Linux Desktop App
+      - name: Build Linux App
+        run: flutter build linux --release
+
+      # Build Web App
+      - name: Build Web App
+        run: flutter build web
+
+      # Generate Release Version
+      - name: Generate Release Version
+        id: version
+        run: echo "version=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+
+      # Create GitHub Release for Linux App
+      - name: Create Linux Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: build/linux/x64/release/bundle/*
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Linux Release ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+
+      # Create GitHub Release for Web App (optional if needed)
+      - name: Publish Web App (Optional)
+        run: |
+          # Example: Copy built web files to a deployment branch
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git checkout -b gh-pages
+          cp -r build/web/* .
+          git add .
+          git commit -m "Deploy Web App ${{ steps.version.outputs.version }}"
+          git push --force origin gh-pages
