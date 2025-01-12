@@ -514,16 +514,23 @@ class _View1State extends State<View1> with TickerProviderStateMixin {
   // Tabela z historią danego posła
   Widget _buildMpHistoryTable(List<Map<String, dynamic>> data) {
     if (data.isEmpty) return SizedBox.shrink();
-    final columns = data.first.keys.toList();
+
+    // Lista wszystkich kluczy, które będą stanowiły wiersze transponowanej tabeli.
+    final keys = data.first.keys.toList();
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-        rows: data.map((row) {
-          return DataRow(
-            cells: columns.map((c) {
-              return DataCell(Text(row[c].toString()));
+        columns: [DataColumn(label: Text('Informacja'))] +
+            data.asMap().entries.map((entry) {
+              return DataColumn(label: Text('Wartość'));
             }).toList(),
+        rows: keys.map((key) {
+          return DataRow(
+            cells: [
+              DataCell(Text(key)), // Pierwsza kolumna zawiera nazwy pól (klucze)
+              ...data.map((row) => DataCell(Text(row[key].toString()))).toList(),
+            ],
           );
         }).toList(),
       ),

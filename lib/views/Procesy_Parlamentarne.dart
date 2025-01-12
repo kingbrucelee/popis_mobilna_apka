@@ -348,25 +348,30 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         ),
         Text(response),
         SizedBox(height: 8),
-        Text(
-          'Załączniki:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        ...attachments.map((url) {
-          if (url != null) {
-            return InkWell(
-              onTap: () => _launchUrl(url),
-              child: Text(
-                url,
-                style: TextStyle(
-                    color: Colors.blue, decoration: TextDecoration.underline),
+        if (attachments.isNotEmpty && attachments.any((url) => url != null))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Załączniki:',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-            );
-          } else {
-            return Text('Brak załączników');
-          }
-        }),
-
+              ...attachments.map((url) {
+                if (url != null) {
+                  return InkWell(
+                    onTap: () => _launchUrl(url),
+                    child: Text(
+                      url,
+                      style: TextStyle(
+                          color: Colors.blue, decoration: TextDecoration.underline),
+                    ),
+                  );
+                } else {
+                  return SizedBox.shrink(); // Nie wyświetlaj nic dla null
+                }
+              }),
+            ],
+          ),
         SizedBox(height: 16),
         Divider(),
 
@@ -554,7 +559,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         _committeePresidium = presidium;
       });
     } catch (e) {
-      print('Błąd podczas ładowania prezydium komisji: $e');
+      print('Błąd podczas ładowania składu komisji: $e');
     } finally {
       print(_committeePresidium);
       setState(() {
@@ -799,10 +804,10 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
         Text('Nazwa: ${_committeeDetails!['name']}'),
         Text('Zakres działania: ${_committeeDetails!['scope']}'),
         SizedBox(height: 8),
-        Text('Prezydium Komisji:',
+        Text('Skład komisji:',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         _committeePresidium.isEmpty
-            ? Text('Brak danych o prezydium.')
+            ? Text('Brak danych o składzie.')
             : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
