@@ -170,7 +170,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                child: Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -191,6 +192,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       });
                     },
                   ),
+                ),
                 ),
                 SizedBox(width: 8),
                 InkWell(
@@ -238,7 +240,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                  child:Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -259,7 +262,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       });
                     },
                   ),
-                ),
+                ),),
                 SizedBox(width: 8),
                 InkWell(
                   onTap: () {
@@ -676,7 +679,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                  child:Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -706,7 +710,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       fetchCommittees();
                     },
                   ),
-                ),
+                ),),
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
@@ -857,7 +861,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                  child:Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -881,7 +886,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       });
                     },
                   ),
-                ),
+                ),),
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
@@ -965,7 +970,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                  child:Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -990,7 +996,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       });
                     },
                   ),
-                ),
+                ),),
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
@@ -1118,7 +1124,8 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
+                Expanded(
+                  child:Container(
                   width: 220,
                   height: 50,
                   child: TextField(
@@ -1149,7 +1156,7 @@ class _View2State extends State<View2> with SingleTickerProviderStateMixin {
                       });
                     },
                   ),
-                ),
+                ),),
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
